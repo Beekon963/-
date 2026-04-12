@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>報酬設計 | EVENT SALES PORTAL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --red:     #d91a2a;
+  --red-dark:#a01020;
+  --red-dim: rgba(217,26,42,0.12);
+  --red-mid: rgba(217,26,42,0.25);
+  --white:   #ffffff;
+  --off-white: #f8f2f2;
+  --gray-1:  #f0e8e8;
+  --gray-2:  #e0d0d0;
+  --gray-3:  #c8a8a8;
+  --gray-text:#6a3a3a;
+  --border:  rgba(217,26,42,0.15);
+  --shadow:  rgba(217,26,42,0.12);
+}
+html { scroll-behavior:smooth; }
+body {
+  font-family:'Noto Sans JP',sans-serif;
+  background:var(--white);
+  color:#1a0808;
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* ===== HEADER ===== */
+.header {
+  background:var(--red);
+  padding:16px 20px;
+  display:flex; align-items:center; gap:12px;
+  position:sticky; top:0; z-index:100;
+  box-shadow:0 2px 16px rgba(217,26,42,0.3);
+}
+.header-logo {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:24px; letter-spacing:.15em; color:var(--white);
+}
+.header-sub {
+  font-size:9px; color:rgba(255,255,255,0.7);
+  letter-spacing:.2em; text-transform:uppercase;
+  border-left:1px solid rgba(255,255,255,0.3);
+  padding-left:12px; margin-left:4px;
+}
+
+/* ===== HERO ===== */
+.hero {
+  background:linear-gradient(160deg, var(--red) 0%, var(--red-dark) 100%);
+  padding:40px 20px 48px;
+  position:relative; overflow:hidden; color:var(--white);
+}
+.hero::before {
+  content:'REWARD';
+  position:absolute; top:-20px; right:-20px;
+  font-family:'Bebas Neue',sans-serif;
+  font-size:110px; letter-spacing:.02em;
+  color:rgba(255,255,255,0.06);
+  pointer-events:none; white-space:nowrap;
+  animation:drift 10s ease-in-out infinite alternate;
+}
+@keyframes drift {
+  from { transform:translateX(0); }
+  to   { transform:translateX(-20px); }
+}
+.hero-label {
+  font-size:10px; color:rgba(255,255,255,0.7);
+  letter-spacing:.3em; text-transform:uppercase;
+  font-family:'Space Mono',monospace;
+  margin-bottom:12px; display:flex; align-items:center; gap:8px;
+}
+.hero-label::before { content:''; width:20px; height:1px; background:rgba(255,255,255,0.5); }
+.hero h1 {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:56px; letter-spacing:.04em; line-height:1;
+  margin-bottom:14px;
+}
+.hero p { font-size:13px; color:rgba(255,255,255,0.8); line-height:1.8; max-width:300px; }
+
+/* ===== SECTION ===== */
+.section { padding:32px 20px; }
+.section-label {
+  font-size:9px; color:var(--red);
+  letter-spacing:.25em; text-transform:uppercase;
+  font-family:'Space Mono',monospace;
+  margin-bottom:20px;
+  display:flex; align-items:center; gap:10px;
+  font-weight:700;
+}
+.section-label::after { content:''; flex:1; height:1px; background:var(--border); }
+
+/* ===== RANK CARDS ===== */
+.rank-card {
+  border:1.5px solid var(--border);
+  border-radius:12px; margin-bottom:10px;
+  overflow:hidden; background:var(--white);
+  box-shadow:0 2px 12px var(--shadow);
+  transition:all .25s;
+  animation:slideUp .4s ease both;
+}
+.rank-card:hover { box-shadow:0 6px 24px var(--shadow); transform:translateY(-1px); }
+.rank-card:nth-child(2) { animation-delay:.05s; }
+.rank-card:nth-child(3) { animation-delay:.10s; }
+.rank-card:nth-child(4) { animation-delay:.15s; }
+.rank-card:nth-child(5) { animation-delay:.20s; }
+.rank-card:nth-child(6) { animation-delay:.25s; }
+@keyframes slideUp {
+  from { opacity:0; transform:translateY(14px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.rank-header {
+  padding:16px 18px; display:flex; align-items:center; gap:12px;
+  cursor:pointer; user-select:none;
+}
+.rank-badge {
+  font-family:'Space Mono',monospace; font-size:9px; font-weight:700;
+  letter-spacing:.1em; padding:3px 10px; border-radius:100px;
+  white-space:nowrap; flex-shrink:0;
+}
+.rank-name { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:.06em; line-height:1; }
+.rank-cond { font-size:11px; color:var(--gray-text); margin-top:2px; }
+.rank-pct {
+  margin-left:auto; text-align:right;
+  font-family:'Space Mono',monospace; font-size:30px; font-weight:700;
+}
+.rank-pct small { font-size:10px; color:var(--gray-text); font-family:'Noto Sans JP',sans-serif; display:block; margin-top:2px; }
+.rank-arrow { color:var(--gray-3); transition:transform .3s; flex-shrink:0; }
+.rank-card.open .rank-arrow { transform:rotate(180deg); }
+
+.rank-bar-bg {
+  height:4px; background:var(--gray-1); margin:0 18px 0;
+  border-radius:100px; overflow:hidden;
+}
+.rank-bar-fill { height:100%; border-radius:100px; transition:width .8s cubic-bezier(.4,0,.2,1); }
+
+.rank-detail {
+  display:none; padding:16px 18px 18px;
+  border-top:1px solid var(--border); background:var(--off-white);
+}
+.rank-card.open .rank-detail { display:block; }
+.detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px; }
+.detail-item { background:var(--white); border-radius:8px; padding:10px 12px; border:1px solid var(--border); }
+.d-label { font-size:9px; color:var(--gray-text); letter-spacing:.1em; text-transform:uppercase; margin-bottom:4px; font-family:'Space Mono',monospace; }
+.d-val { font-size:14px; font-weight:700; color:#1a0808; }
+.rank-split { display:flex; gap:8px; }
+.rank-split-item { flex:1; border-radius:8px; padding:10px; text-align:center; border:1px solid var(--border); background:var(--white); }
+.s-label { font-size:9px; color:var(--gray-text); margin-bottom:4px; }
+.s-val { font-family:'Space Mono',monospace; font-size:22px; font-weight:700; }
+
+/* ランク別カラー */
+.bronze .rank-name,.bronze .rank-pct { color:#a0522d; }
+.bronze .rank-badge { background:rgba(160,82,45,.12); color:#a0522d; border:1px solid rgba(160,82,45,.3); }
+.bronze .rank-bar-fill { background:linear-gradient(90deg,#a0522d,#cd7f32); }
+.bronze .rank-split-item.you .s-val { color:#a0522d; }
+.bronze .rank-split-item.you { background:rgba(160,82,45,.08); }
+
+.silver .rank-name,.silver .rank-pct { color:#707070; }
+.silver .rank-badge { background:rgba(120,120,120,.12); color:#707070; border:1px solid rgba(120,120,120,.3); }
+.silver .rank-bar-fill { background:linear-gradient(90deg,#909090,#c0c0c0); }
+.silver .rank-split-item.you .s-val { color:#707070; }
+.silver .rank-split-item.you { background:rgba(120,120,120,.08); }
+
+.gold .rank-name,.gold .rank-pct { color:var(--red); }
+.gold .rank-badge { background:var(--red-dim); color:var(--red); border:1px solid var(--red-mid); }
+.gold .rank-bar-fill { background:linear-gradient(90deg,var(--red-dark),var(--red)); }
+.gold .rank-split-item.you .s-val { color:var(--red); }
+.gold .rank-split-item.you { background:var(--red-dim); }
+
+.platinum .rank-name,.platinum .rank-pct { color:#1a5080; }
+.platinum .rank-badge { background:rgba(26,80,128,.1); color:#1a5080; border:1px solid rgba(26,80,128,.25); }
+.platinum .rank-bar-fill { background:linear-gradient(90deg,#1a5080,#4090c0); }
+.platinum .rank-split-item.you .s-val { color:#1a5080; }
+.platinum .rank-split-item.you { background:rgba(26,80,128,.08); }
+
+.diamond .rank-name,.diamond .rank-pct { color:#6020a0; }
+.diamond .rank-badge { background:rgba(96,32,160,.1); color:#6020a0; border:1px solid rgba(96,32,160,.25); }
+.diamond .rank-bar-fill { background:linear-gradient(90deg,#6020a0,#a050e0); }
+.diamond .rank-split-item.you .s-val { color:#6020a0; }
+.diamond .rank-split-item.you { background:rgba(96,32,160,.08); }
+
+.master .rank-name,.master .rank-pct { color:#1a0808; }
+.master .rank-badge { background:#1a0808; color:#ffffff; border:1px solid #1a0808; }
+.master .rank-bar-fill { background:linear-gradient(90deg,#1a0808,var(--red)); }
+.master .rank-split-item.you .s-val { color:#1a0808; }
+.master .rank-split-item.you { background:rgba(26,8,8,.06); }
+
+.company-it .s-val { color:var(--gray-3); }
+
+/* ===== DIVIDER ===== */
+.divider { height:1px; background:var(--border); margin:0 20px; }
+
+/* ===== SIMULATOR ===== */
+.sim-card {
+  background:var(--white); border:1.5px solid var(--border);
+  border-radius:16px; padding:24px 20px;
+  box-shadow:0 4px 24px var(--shadow);
+}
+
+/* 単価入力 */
+.price-input-wrap {
+  position:relative; margin-bottom:6px;
+}
+.price-prefix {
+  position:absolute; left:14px; top:50%; transform:translateY(-50%);
+  font-family:'Space Mono',monospace; font-size:18px; font-weight:700;
+  color:var(--red); pointer-events:none;
+}
+.price-input {
+  width:100%; padding:14px 14px 14px 36px;
+  font-family:'Space Mono',monospace; font-size:24px; font-weight:700;
+  border:2px solid var(--border); border-radius:10px;
+  background:var(--off-white); color:#1a0808;
+  outline:none; transition:border-color .2s;
+}
+.price-input:focus { border-color:var(--red); background:var(--white); }
+.price-suffix {
+  font-size:13px; color:var(--gray-text); margin-top:4px;
+  text-align:right; font-family:'Space Mono',monospace;
+}
+
+/* プリセットボタン */
+.presets { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:20px; }
+.preset-btn {
+  padding:5px 12px; border-radius:100px;
+  border:1.5px solid var(--border);
+  background:var(--white); color:var(--gray-text);
+  font-family:'Space Mono',monospace; font-size:11px; font-weight:700;
+  cursor:pointer; transition:all .2s;
+}
+.preset-btn:hover { border-color:var(--red); color:var(--red); }
+.preset-btn.active { background:var(--red); color:var(--white); border-color:var(--red); }
+
+.sim-row { margin-bottom:20px; }
+.sim-label {
+  font-size:10px; color:var(--red);
+  letter-spacing:.15em; text-transform:uppercase;
+  font-family:'Space Mono',monospace; font-weight:700;
+  margin-bottom:8px;
+}
+.sim-slider {
+  width:100%; -webkit-appearance:none;
+  height:4px; border-radius:100px;
+  background:var(--gray-1); outline:none; cursor:pointer;
+  accent-color:var(--red);
+}
+.sim-slider::-webkit-slider-thumb {
+  -webkit-appearance:none; width:22px; height:22px; border-radius:50%;
+  background:var(--red); cursor:pointer;
+  box-shadow:0 0 0 3px var(--white), 0 0 0 5px var(--red-mid);
+}
+.sim-slider-val {
+  text-align:right; font-family:'Space Mono',monospace;
+  font-size:14px; font-weight:700; color:#1a0808; margin-top:8px;
+}
+
+/* RESULT */
+.sim-result { margin-top:24px; padding-top:20px; border-top:2px solid var(--border); }
+.sim-result-rank-row {
+  display:flex; align-items:center; gap:10px; margin-bottom:16px;
+}
+.sim-rank-badge-r {
+  font-size:10px; font-family:'Space Mono',monospace; font-weight:700;
+  padding:4px 12px; border-radius:100px;
+}
+.sim-rank-label { font-size:12px; color:var(--gray-text); }
+
+.result-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+.result-item {
+  background:var(--off-white); border-radius:10px; padding:14px;
+  border:1px solid var(--border);
+}
+.r-label { font-size:9px; color:var(--gray-text); letter-spacing:.1em; font-family:'Space Mono',monospace; margin-bottom:6px; }
+.r-val { font-family:'Space Mono',monospace; font-size:20px; font-weight:700; color:#1a0808; }
+.result-item.main {
+  grid-column:span 2;
+  background:var(--red); border-color:var(--red);
+}
+.result-item.main .r-label { color:rgba(255,255,255,0.7); }
+.result-item.main .r-val { font-size:38px; color:var(--white); }
+
+.bar-section { margin-top:4px; }
+.bar-labels { display:flex; justify-content:space-between; font-size:11px; margin-bottom:6px; }
+.bar-bg { height:10px; background:var(--gray-1); border-radius:100px; overflow:hidden; }
+.bar-fill { height:100%; border-radius:100px; background:var(--red); transition:width .6s cubic-bezier(.4,0,.2,1); }
+
+/* ===== NOTES ===== */
+.note-item {
+  display:flex; gap:14px; padding:16px 0;
+  border-bottom:1px solid var(--border);
+}
+.note-item:last-child { border-bottom:none; }
+.note-num {
+  font-family:'Space Mono',monospace; font-size:11px;
+  color:var(--red); font-weight:700; flex-shrink:0; padding-top:2px;
+}
+.note-item h4 { font-size:13px; font-weight:700; margin-bottom:4px; }
+.note-item p { font-size:12px; color:var(--gray-text); line-height:1.7; }
+
+/* ===== LINE CTA ===== */
+.line-cta {
+  margin:0 20px 60px;
+  background:var(--red); border-radius:16px;
+  padding:28px 20px; text-align:center;
+  box-shadow:0 8px 32px rgba(217,26,42,0.25);
+}
+.line-cta h3 { font-size:16px; font-weight:900; color:var(--white); margin-bottom:8px; }
+.line-cta p { font-size:12px; color:rgba(255,255,255,0.75); margin-bottom:20px; line-height:1.7; }
+.btn-line-cta {
+  display:inline-flex; align-items:center; gap:10px;
+  padding:14px 32px; border-radius:100px;
+  background:var(--white); color:var(--red);
+  font-family:'Noto Sans JP',sans-serif;
+  font-size:14px; font-weight:900;
+  text-decoration:none; transition:all .2s;
+  box-shadow:0 4px 20px rgba(0,0,0,0.15);
+}
+.btn-line-cta:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(0,0,0,0.2); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-logo">ESP</div>
+  <div class="header-sub">Event Sales Portal</div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-label">Reward System</div>
+  <h1>報酬設計</h1>
+  <p>稼働日数が増えるほど、<br>あなたの取り分が上がる仕組みです。</p>
+</div>
+
+<!-- RANKS -->
+<div class="section">
+  <div class="section-label">01 — Rank Structure</div>
+
+  <!-- Bronze -->
+  <div class="rank-card bronze" onclick="toggleRank(this)">
+    <div class="rank-header">
+      <div><div class="rank-badge">BRONZE</div></div>
+      <div style="margin-left:4px;">
+        <div class="rank-name">Bronze</div>
+        <div class="rank-cond">月間〜7日稼働</div>
+      </div>
+      <div class="rank-pct">70%<small>あなたの取り分</small></div>
+      <div class="rank-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+    </div>
+    <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:70%"></div></div>
+    <div class="rank-detail">
+      <div class="detail-grid">
+        <div class="detail-item"><div class="d-label">稼働目安</div><div class="d-val">月7日以内</div></div>
+        <div class="detail-item"><div class="d-label">会社マージン</div><div class="d-val">30%</div></div>
+      </div>
+      <div class="rank-split">
+        <div class="rank-split-item you"><div class="s-label">あなたの取り分</div><div class="s-val">70%</div></div>
+        <div class="rank-split-item company-it"><div class="s-label">会社</div><div class="s-val">30%</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Silver -->
+  <div class="rank-card silver" onclick="toggleRank(this)">
+    <div class="rank-header">
+      <div><div class="rank-badge">SILVER</div></div>
+      <div style="margin-left:4px;">
+        <div class="rank-name">Silver</div>
+        <div class="rank-cond">月間8〜14日稼働</div>
+      </div>
+      <div class="rank-pct">75%<small>あなたの取り分</small></div>
+      <div class="rank-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+    </div>
+    <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:75%"></div></div>
+    <div class="rank-detail">
+      <div class="detail-grid">
+        <div class="detail-item"><div class="d-label">稼働目安</div><div class="d-val">月8〜14日</div></div>
+        <div class="detail-item"><div class="d-label">会社マージン</div><div class="d-val">25%</div></div>
+      </div>
+      <div class="rank-split">
+        <div class="rank-split-item you"><div class="s-label">あなたの取り分</div><div class="s-val">75%</div></div>
+        <div class="rank-split-item company-it"><div class="s-label">会社</div><div class="s-val">25%</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gold -->
+  <div class="rank-card gold" onclick="toggleRank(this)">
+    <div class="rank-header">
+      <div><div class="rank-badge">GOLD</div></div>
+      <div style="margin-left:4px;">
+        <div class="rank-name">Gold</div>
+        <div class="rank-cond">月間15〜19日稼働</div>
+      </div>
+      <div class="rank-pct">80%<small>あなたの取り分</small></div>
+      <div class="rank-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+    </div>
+    <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:80%"></div></div>
+    <div class="rank-detail">
+      <div class="detail-grid">
+        <div class="detail-item"><div class="d-label">稼働目安</div><div class="d-val">月15〜19日</div></div>
+        <div class="detail-item"><div class="d-label">会社マージン</div><div class="d-val">20%</div></div>
+      </div>
+      <div class="rank-split">
+        <div class="rank-split-item you"><div class="s-label">あなたの取り分</div><div class="s-val">80%</div></div>
+        <div class="rank-split-item company-it"><div class="s-label">会社</div><div class="s-val">20%</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Platinum -->
+  <div class="rank-card platinum" onclick="toggleRank(this)">
+    <div class="rank-header">
+      <div><div class="rank-badge">PLATINUM</div></div>
+      <div style="margin-left:4px;">
+        <div class="rank-name">Platinum</div>
+        <div class="rank-cond">月間20日〜稼働</div>
+      </div>
+      <div class="rank-pct">85%<small>あなたの取り分</small></div>
+      <div class="rank-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+    </div>
+    <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:85%"></div></div>
+    <div class="rank-detail">
+      <div class="detail-grid">
+        <div class="detail-item"><div class="d-label">稼働目安</div><div class="d-val">月20日以上</div></div>
+        <div class="detail-item"><div class="d-label">会社マージン</div><div class="d-val">15%</div></div>
+      </div>
+      <div class="rank-split">
+        <div class="rank-split-item you"><div class="s-label">あなたの取り分</div><div class="s-val">85%</div></div>
+        <div class="rank-split-item company-it"><div class="s-label">会社</div><div class="s-val">15%</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Diamond -->
+  <div class="rank-card diamond" onclick="toggleRank(this)">
+    <div class="rank-header">
+      <div><div class="rank-badge">DIAMOND</div></div>
+      <div style="margin-left:4px;">
+        <div class="rank-name">Diamond</div>
+        <div class="rank-cond">20日以上を3ヶ月継続</div>
+      </div>
+      <div class="rank-pct">90%<small>あなたの取り分</small></div>
+      <div class="rank-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+    </div>
+    <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:90%"></div></div>
+    <div class="rank-detail">
+      <div class="detail-grid">
+        <div class="detail-item"><div class="d-label">条件</div><div class="d-val">月20日以上×3ヶ月継続</div></div>
+        <div class="detail-item"><div class="d-label">会社マージン</div><div class="d-val">10%</div></div>
+      </div>
+      <div class="rank-split">
+        <div class="rank-split-item you"><div class="s-label">あなたの取り分</div><div class="s-val">90%</div></div>
+        <div class="rank-split-item company-it"><div class="s-label">会社</div><div class="s-val">10%</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Master -->
+  <div class="rank-card master" onclick="toggleRank(this)">
+    <div class="rank-header">
+      <div><div class="rank-badge">MASTER</div></div>
+      <div style="margin-left:4px;">
+        <div class="rank-name">Master</div>
+        <div class="rank-cond">特別枠・招待制</div>
+      </div>
+      <div class="rank-pct">90%<small>あなたの取り分</small></div>
+      <div class="rank-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></div>
+    </div>
+    <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:90%"></div></div>
+    <div class="rank-detail">
+      <div class="detail-grid">
+        <div class="detail-item"><div class="d-label">条件</div><div class="d-val">運営からの招待制</div></div>
+        <div class="detail-item"><div class="d-label">会社マージン</div><div class="d-val">10%</div></div>
+      </div>
+      <div class="rank-split">
+        <div class="rank-split-item you"><div class="s-label">あなたの取り分</div><div class="s-val">90%</div></div>
+        <div class="rank-split-item company-it"><div class="s-label">会社</div><div class="s-val">10%</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- SIMULATOR -->
+<div class="section">
+  <div class="section-label">02 — Income Simulator</div>
+  <div class="sim-card">
+
+    <!-- 単価入力 -->
+    <div class="sim-row">
+      <div class="sim-label">日当単価（自分で入力）</div>
+      <div class="price-input-wrap">
+        <span class="price-prefix">¥</span>
+        <input type="number" class="price-input" id="priceInput"
+          value="30000" min="1000" max="200000" step="1000"
+          oninput="updateSim()">
+      </div>
+      <div class="price-suffix" id="priceNote">¥30,000 / 日</div>
+    </div>
+
+    <!-- プリセット -->
+    <div class="presets" id="presets">
+      <button class="preset-btn" data-v="23000" onclick="setPreset(this)">法人CL¥23,000</button>
+      <button class="preset-btn" data-v="27000" onclick="setPreset(this)">オープナー¥27,000</button>
+      <button class="preset-btn active" data-v="30000" onclick="setPreset(this)">クローザー¥30,000</button>
+      <button class="preset-btn" data-v="33000" onclick="setPreset(this)">D¥33,000</button>
+      <button class="preset-btn" data-v="50000" onclick="setPreset(this)">4パケCL¥50,000</button>
+      <button class="preset-btn" data-v="54000" onclick="setPreset(this)">4パケD¥54,000</button>
+    </div>
+
+    <!-- 稼働日数 -->
+    <div class="sim-row">
+      <div class="sim-label">月間稼働日数</div>
+      <input type="range" class="sim-slider" id="daysSlider"
+        min="1" max="25" value="10" oninput="updateSim()">
+      <div class="sim-slider-val" id="daysVal">10日 / 月</div>
+    </div>
+
+    <!-- 結果 -->
+    <div class="sim-result" id="simResult"></div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- NOTES -->
+<div class="section">
+  <div class="section-label">03 — System Notes</div>
+  <div class="note-item">
+    <div class="note-num">01</div>
+    <div>
+      <h4>単価は案件・ポジション・キャリアで変わります</h4>
+      <p>シミュレーターの単価は自由に変更できます。実際の案件情報をもとに入力してください。</p>
+    </div>
+  </div>
+  <div class="note-item">
+    <div class="note-num">02</div>
+    <div>
+      <h4>交通費・宿泊費は別途支給</h4>
+      <p>遠方案件の場合、交通費・宿泊費は全額または一部を支給します。案件ごとに詳細をご確認ください。</p>
+    </div>
+  </div>
+  <div class="note-item">
+    <div class="note-num">03</div>
+    <div>
+      <h4>支払いサイクル</h4>
+      <p>原則として月末締め・翌月払いです。詳細は担当者にお問い合わせください。</p>
+    </div>
+  </div>
+  <div class="note-item">
+    <div class="note-num">04</div>
+    <div>
+      <h4>ランクは継続実績を重視</h4>
+      <p>突発的な不稼働があっても、継続実績に応じて柔軟に判断します。</p>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- CTA -->
+<div class="section" style="padding-bottom:0;">
+  <div class="line-cta">
+    <h3>報酬・ランクについて聞きたい</h3>
+    <p>単価交渉・支払いタイミングなど<br>気になることはLINEでお気軽に</p>
+    <a class="btn-line-cta" href="https://line.me/R/ti/p/@597ckygq" target="_blank">
+      <svg width="20" height="20" viewBox="0 0 48 48" fill="none">
+        <rect width="48" height="48" rx="10" fill="#06C755"/>
+        <path d="M24 8C15.16 8 8 14.26 8 22c0 5.4 3.4 10.14 8.5 12.82-.36 1.34-1.28 4.86-1.46 5.6-.22.88.32.88.68.64.28-.18 4.38-2.98 6.16-4.18.68.1 1.38.14 2.12.14 8.84 0 16-6.26 16-14S32.84 8 24 8z" fill="white"/>
+      </svg>
+      LINEで問い合わせる
+    </a>
+  </div>
+</div>
+<div style="height:40px;"></div>
+
+<script>
+const RANKS = [
+  { name:'Bronze',  pct:70, maxDays:7,  color:'#a0522d', badge:'BRONZE'   },
+  { name:'Silver',  pct:75, maxDays:14, color:'#707070', badge:'SILVER'   },
+  { name:'Gold',    pct:80, maxDays:19, color:'#d91a2a', badge:'GOLD'     },
+  { name:'Platinum',pct:85, maxDays:99, color:'#1a5080', badge:'PLATINUM' },
+];
+
+function toggleRank(card) {
+  const isOpen = card.classList.contains('open');
+  document.querySelectorAll('.rank-card').forEach(c => c.classList.remove('open'));
+  if (!isOpen) card.classList.add('open');
+}
+
+function setPreset(btn) {
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('priceInput').value = btn.dataset.v;
+  updateSim();
+}
+
+function getRank(days) {
+  if (days >= 20) return RANKS[3];
+  if (days >= 15) return RANKS[2];
+  if (days >= 8)  return RANKS[1];
+  return RANKS[0];
+}
+
+function updateSim() {
+  const price = parseInt(document.getElementById('priceInput').value) || 0;
+  const days  = parseInt(document.getElementById('daysSlider').value);
+  document.getElementById('daysVal').textContent = `${days}日 / 月`;
+  document.getElementById('priceNote').textContent = `¥${price.toLocaleString()} / 日`;
+
+  const rank   = getRank(days);
+  const gross  = price * days;
+  const you    = Math.floor(gross * rank.pct / 100);
+  const comp   = gross - you;
+  const pctStr = rank.pct;
+  const c      = rank.color;
+
+  document.getElementById('simResult').innerHTML = `
+    <div class="sim-result-rank-row">
+      <div class="sim-rank-badge-r" style="background:rgba(0,0,0,.07);color:${c};border:1px solid ${c}40;">${rank.badge}</div>
+      <div class="sim-rank-label">このランクが適用されます</div>
+    </div>
+    <div class="result-grid">
+      <div class="result-item main">
+        <div class="r-label">あなたの月収（概算）</div>
+        <div class="r-val">¥${you.toLocaleString()}</div>
+      </div>
+      <div class="result-item">
+        <div class="r-label">総売上</div>
+        <div class="r-val">¥${gross.toLocaleString()}</div>
+      </div>
+      <div class="result-item">
+        <div class="r-label">取り分率</div>
+        <div class="r-val" style="color:${c};">${pctStr}%</div>
+      </div>
+    </div>
+    <div class="bar-section">
+      <div class="bar-labels">
+        <span style="color:${c};font-weight:700;">あなた ${pctStr}% ＝ ¥${you.toLocaleString()}</span>
+        <span style="color:var(--gray-text);">会社 ${100-pctStr}%</span>
+      </div>
+      <div class="bar-bg"><div class="bar-fill" style="width:${pctStr}%;background:${c};"></div></div>
+    </div>
+  `;
+}
+
+updateSim();
+</script>
+</body>
+</html>
