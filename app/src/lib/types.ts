@@ -1,0 +1,147 @@
+export type Stars = 1 | 2 | 3
+export type GoalLevel = 'main' | 'mid' | 'small'
+export type ActivityKind = 'attack' | 'defense'
+export type PersonCategory = '社員' | '取引先' | '仲間' | '家族' | 'その他'
+export type ContactMethod = '会った' | '電話' | 'LINE' | 'メール' | 'その他'
+
+/** 昇格条件（自己申告でクリアにする） */
+export interface RankCondition {
+  id: string
+  text: string
+  cleared: boolean
+  clearedDate?: string
+}
+
+export interface RankDef {
+  id: string
+  name: string
+  color: string
+  /** このランクに到達するのに必要な累計XP */
+  minXp: number
+  /** III → II → I のような段階数 */
+  divisions: number
+  /** このランクへの昇格条件 */
+  conditions: RankCondition[]
+}
+
+export interface XpRules {
+  /** デイリー ★1/★2/★3 */
+  quest: [number, number, number]
+  perfectBonus: number
+  attackPer30: number
+  defensePer30: number
+  goal: Record<GoalLevel, number>
+  contact: number
+  review: number
+  streakEvery: number
+  streakBonus: number
+  /** 設定したデイリーを達成できなかった数 × これ だけXPが減る */
+  penaltyMissedQuest: number
+  /** デイリーを1つも設定しなかった日に減るXP */
+  penaltyNoQuest: number
+  restDaysPerWeek: number
+}
+
+export interface Config {
+  ranks: RankDef[]
+  rules: XpRules
+  /** この時刻より前は前日扱い */
+  dayStartHour: number
+  attackTargetPct: number
+}
+
+export interface Profile {
+  /** 降格ペナルティの計算を始める日 */
+  startDate: string
+}
+
+export interface Goal {
+  level: GoalLevel
+  parentId: string | null
+  title: string
+  why?: string
+  deadline?: string
+  done: boolean
+  doneDate?: string
+  xp: number
+  createdAt: number
+}
+
+export interface DailyQuest {
+  date: string
+  title: string
+  goalId?: string
+  stars: Stars
+  xp: number
+  done: boolean
+  createdAt: number
+}
+
+export interface Activity {
+  date: string
+  kind: ActivityKind
+  title: string
+  minutes: number
+  goalId?: string
+  questId?: string
+  xp: number
+  createdAt: number
+}
+
+export interface Person {
+  name: string
+  category: PersonCategory
+  org?: string
+  memo?: string
+  nextAction?: string
+  nextActionDue?: string
+  /** この日数連絡がないと警告 */
+  alertDays: number
+  createdAt: number
+}
+
+export interface Contact {
+  personId: string
+  date: string
+  method: ContactMethod
+  note?: string
+  xp: number
+  createdAt: number
+}
+
+export interface Review {
+  date: string
+  comment: string
+  score?: number
+  xp: number
+  createdAt: number
+}
+
+export interface RestDay {
+  date: string
+}
+
+export interface RecordMap {
+  config: Config
+  profile: Profile
+  goal: Goal
+  quest: DailyQuest
+  activity: Activity
+  person: Person
+  contact: Contact
+  review: Review
+  rest: RestDay
+}
+
+export type RecType = keyof RecordMap
+
+export interface Rec<T extends RecType = RecType> {
+  id: string
+  type: T
+  data: RecordMap[T]
+  /** 端末側の更新時刻（ms） */
+  updatedAt: number
+  deleted?: boolean
+}
+
+export type WithId<T> = T & { id: string }
