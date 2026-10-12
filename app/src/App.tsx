@@ -9,6 +9,7 @@ import { RankTable } from './screens/RankTable'
 import { Settings } from './screens/Settings'
 import { Squad } from './screens/Squad'
 import { Stats } from './screens/Stats'
+import { Vision } from './screens/Vision'
 import { useCloud } from './store/cloud'
 import { useData } from './store/data'
 import { ensureProfile, useGame } from './store/game'
@@ -48,7 +49,7 @@ function Game() {
 
   return (
     <div className="app">
-      {page === 'ranks' ? <RankTable /> : page === 'settings' ? <Settings /> : (
+      {page === 'ranks' ? <RankTable /> : page === 'settings' ? <Settings /> : page === 'vision' ? <Vision /> : (
         <>
           {tab === 'home' && <Home />}
           {tab === 'quests' && <Quests />}

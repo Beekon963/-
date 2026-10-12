@@ -121,6 +121,32 @@ export interface RestDay {
   date: string
 }
 
+export interface VisionValue {
+  name: string
+  text: string
+  /** いちばん大切にする価値観 */
+  core?: boolean
+}
+
+export interface VisionMilestone {
+  year: number
+  age?: number
+  title: string
+  text?: string
+}
+
+/** 人生の目標（「何のために頑張るのか」） */
+export interface Vision {
+  mission: string
+  statement?: string
+  why?: string
+  values: VisionValue[]
+  milestones: VisionMilestone[]
+  dream?: string
+  dailyRule?: string
+  purpose?: string
+}
+
 export interface RecordMap {
   config: Config
   profile: Profile
@@ -131,6 +157,7 @@ export interface RecordMap {
   contact: Contact
   review: Review
   rest: RestDay
+  vision: Vision
 }
 
 export type RecType = keyof RecordMap

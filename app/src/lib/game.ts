@@ -300,6 +300,17 @@ export function weeklyStats(
   return out
 }
 
+// ---------- 挑戦回数 ----------
+
+/** 挑戦＝達成したデイリー＋攻めの記録（デイリーから記録した時間は二重に数えない） */
+export function challengesByDate(quests: DailyQuest[], activities: Activity[]) {
+  const map = new Map<string, number>()
+  const add = (date: string) => map.set(date, (map.get(date) ?? 0) + 1)
+  for (const q of quests) if (q.done) add(q.date)
+  for (const a of activities) if (a.kind === 'attack' && !a.questId) add(a.date)
+  return map
+}
+
 // ---------- 目標 ----------
 
 export function childrenMap(goals: WithId<Goal>[]) {

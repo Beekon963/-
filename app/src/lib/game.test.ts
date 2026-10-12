@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { addDays, logicalToday, weekStart } from './date'
 import { DEFAULT_CONFIG, DEFAULT_RANKS } from './defaults'
 import {
-  activityXp, buildLedger, computeRank, goalProgress, childrenMap, personStatus, summarize, weeklyStats,
+  activityXp, buildLedger, challengesByDate, computeRank, goalProgress, childrenMap, personStatus, summarize, weeklyStats,
   type GameData,
 } from './game'
 import type { DailyQuest, Goal, RankDef, WithId } from './types'
@@ -163,5 +163,22 @@ describe('stats', () => {
     const s = personStatus(p, [{ personId: 'x', date: '2026-09-01', method: '電話', xp: 10, createdAt: 0 }], '2026-10-12', '2026-08-01')
     expect(s.daysSince).toBe(41)
     expect(s.overdue).toBe(true)
+  })
+})
+
+describe('challenges', () => {
+  it('counts done quests and attack logs without double counting quest time', () => {
+    const d = '2026-10-12'
+    const q = quest(d, true, 40, 'q1')
+    const map = challengesByDate(
+      [q, quest(d, false), quest('2026-10-11', true)],
+      [
+        { date: d, kind: 'attack', title: 'q', minutes: 60, questId: 'q1', xp: 20, createdAt: 0 },
+        { date: d, kind: 'attack', title: '企画書', minutes: 30, xp: 10, createdAt: 0 },
+        { date: d, kind: 'defense', title: '事務', minutes: 30, xp: 2, createdAt: 0 },
+      ],
+    )
+    expect(map.get(d)).toBe(2)
+    expect(map.get('2026-10-11')).toBe(1)
   })
 })

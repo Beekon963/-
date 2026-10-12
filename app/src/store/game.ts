@@ -3,10 +3,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { logicalToday, weekStart, addDays } from '../lib/date'
 import { DEFAULT_CONFIG, MAX_DAILY_QUESTS } from '../lib/defaults'
-import { activityXp, buildLedger, computeRank, dayStat, summarize } from '../lib/game'
+import { activityXp, buildLedger, challengesByDate, computeRank, dayStat, summarize } from '../lib/game'
 import type {
   Activity, ActivityKind, Config, Contact, ContactMethod, DailyQuest, Goal, GoalLevel, Person, Rec, RecordMap,
-  RecType, Review, Stars, WithId,
+  RecType, Review, Stars, Vision, WithId,
 } from '../lib/types'
 import { newId, patch, put, remove, useData } from './data'
 import { toast } from './ui'
@@ -27,7 +27,7 @@ type Lists = {
 
 function collectLists(records: Record<string, Rec>): Lists {
   const lists: Lists = {
-    config: [], profile: [], goal: [], quest: [], activity: [], person: [], contact: [], review: [], rest: [],
+    config: [], profile: [], goal: [], quest: [], activity: [], person: [], contact: [], review: [], rest: [], vision: [],
   }
   for (const r of Object.values(records)) {
     if (r.deleted || !lists[r.type]) continue
@@ -53,11 +53,22 @@ export function deriveGame(records: Record<string, Rec>, now: Date) {
   const rank = computeRank(total, config.ranks)
   const todayStat = dayStat(today, entries, lists.quest, lists.activity)
 
+  const vision = records.vision && !records.vision.deleted ? (records.vision.data as Vision) : null
+  const challengeMap = challengesByDate(lists.quest, lists.activity)
+  let challengeTotal = 0
+  for (const n of challengeMap.values()) challengeTotal += n
+
   const ws = weekStart(today)
   const restsThisWeek = lists.rest.filter((r) => r.date >= ws && r.date <= addDays(ws, 6)).length
 
   return {
     config,
+    vision,
+    challenges: {
+      total: challengeTotal,
+      today: challengeMap.get(today) ?? 0,
+      yesterday: challengeMap.get(addDays(today, -1)) ?? 0,
+    },
     today,
     startDate,
     hasProfile: !!profile,
@@ -298,4 +309,10 @@ export function setConditionCleared(rankId: string, condId: string, cleared: boo
           },
     ),
   })
+}
+
+// ---------- 人生の目標 ----------
+
+export function saveVision(vision: Vision) {
+  put('vision', 'vision', vision)
 }

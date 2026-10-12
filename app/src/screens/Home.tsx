@@ -32,6 +32,7 @@ export function Home() {
   return (
     <div className="fade-in">
       <TopBar g={g} />
+      <MissionStrip g={g} />
       <RankHero rank={g.rank} total={g.total} onClick={() => openPage('ranks')} />
 
       {g.rank.promotion && <PromotionPanel g={g} />}
@@ -190,6 +191,24 @@ function ratioMessage(atk: number, def: number, target: number) {
   const needAtk = Math.ceil((target * (atk + def) - 100 * atk) / (100 - target))
   if (needAtk <= 0) return '攻め率は目標クリア。この調子で攻め続けろ。'
   return `目標まで、攻めをあと ${fmtMin(Math.ceil(needAtk / 15) * 15)}（守りの業務はXPがほぼ入らない）`
+}
+
+/** 「何のために頑張るのか」を毎日目に入れる */
+function MissionStrip({ g }: { g: Game }) {
+  const c = g.challenges
+  const diff = c.today - c.yesterday
+  return (
+    <button className="mission-strip" onClick={() => openPage('vision')}>
+      <div className="body">
+        <div className="m">{g.vision?.mission || '人生の目標を書いて、毎日の行動とつなげよう'}</div>
+        <div className="c">
+          今日の挑戦<b>{c.today}</b>回 ・ 昨日 {c.yesterday}回
+          {diff > 0 ? <span className="up"> ・ 昨日超え</span> : c.today > 0 && diff === 0 ? ' ・ 昨日に並んだ' : ` ・ 通算 ${c.total}回`}
+        </div>
+      </div>
+      <span className="go">›</span>
+    </button>
+  )
 }
 
 function TopBar({ g }: { g: Game }) {
