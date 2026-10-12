@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
-import { IconChart, IconFlag, IconHome, IconUsers } from './components/Icons'
+import { IconBolt, IconChart, IconFlag, IconHome, IconUsers } from './components/Icons'
 import { rankVars } from './lib/color'
+import { Challenges } from './screens/Challenges'
 import { Home } from './screens/Home'
 import { Login } from './screens/Login'
 import { MatchResult, RankChange } from './screens/Overlays'
@@ -27,6 +28,7 @@ export function App() {
 const TABS: { id: Tab; label: string; Icon: typeof IconHome }[] = [
   { id: 'home', label: 'ホーム', Icon: IconHome },
   { id: 'quests', label: 'クエスト', Icon: IconFlag },
+  { id: 'challenge', label: '挑戦', Icon: IconBolt },
   { id: 'squad', label: '人脈', Icon: IconUsers },
   { id: 'stats', label: '戦績', Icon: IconChart },
 ]
@@ -53,6 +55,7 @@ function Game() {
         <>
           {tab === 'home' && <Home />}
           {tab === 'quests' && <Quests />}
+          {tab === 'challenge' && <Challenges />}
           {tab === 'squad' && <Squad />}
           {tab === 'stats' && <Stats />}
         </>

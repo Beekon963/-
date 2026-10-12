@@ -17,9 +17,12 @@ const RULE_ROWS: { key: NumKey; label: string }[] = [
   { key: 'review', label: '振り返り' },
   { key: 'streakEvery', label: '連続ボーナスの間隔（日）' },
   { key: 'streakBonus', label: '連続ボーナス' },
-  { key: 'penaltyMissedQuest', label: '降格：未達成デイリー1つ' },
+  { key: 'penaltyMissedQuest', label: '降格：未着手デイリー1つ' },
   { key: 'penaltyNoQuest', label: '降格：デイリー未設定の日' },
   { key: 'restDaysPerWeek', label: '休息日（週あたり回数）' },
+  { key: 'startedPct', label: '着手したデイリーのXP（%）' },
+  { key: 'challenge', label: '挑戦ログ1件' },
+  { key: 'post', label: '挑戦を発信した' },
 ]
 
 export function Settings() {

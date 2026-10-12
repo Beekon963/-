@@ -1,16 +1,17 @@
 import { useMemo, useState } from 'react'
-import { Check, IconAlert, IconChevron, IconClose, IconFlame, IconGear, IconMore, IconPlus } from '../components/Icons'
+import { ChallengeSheet } from '../components/ChallengeSheet'
+import { Check, IconAlert, IconBolt, IconChevron, IconClose, IconFlame, IconGear, IconMore, IconPlus } from '../components/Icons'
 import { GoalSelect, MinutesPick, StarsPick, fmtMin } from '../components/forms'
 import { RankHero } from '../components/RankHero'
 import { Sheet } from '../components/Sheet'
 import { formatDot, localDate } from '../lib/date'
 import { MAX_DAILY_QUESTS } from '../lib/defaults'
-import { attackPct, personStatus } from '../lib/game'
+import { attackPct, personStatus, startedXp } from '../lib/game'
 import type { ActivityKind, DailyQuest, Stars, WithId } from '../lib/types'
 import { useCloud } from '../store/cloud'
 import {
   addQuest, deleteActivity, deleteQuest, editQuest, logActivity, saveReview, setConditionCleared, setRestDay,
-  toggleQuest, useGame, type Game,
+  toggleQuest, toggleStarted, useGame, type Game,
 } from '../store/game'
 import { openPage, useUI } from '../store/ui'
 
@@ -21,6 +22,7 @@ export function Home() {
   const [logKind, setLogKind] = useState<ActivityKind | null>(null)
   const [reviewOpen, setReviewOpen] = useState(false)
   const [showActs, setShowActs] = useState(false)
+  const [challengeOpen, setChallengeOpen] = useState(false)
 
   const s = g.todayStat
   const pct = attackPct(s)
@@ -32,7 +34,7 @@ export function Home() {
   return (
     <div className="fade-in">
       <TopBar g={g} />
-      <MissionStrip g={g} />
+      <MissionStrip g={g} onChallenge={() => setChallengeOpen(true)} />
       <RankHero rank={g.rank} total={g.total} onClick={() => openPage('ranks')} />
 
       {g.rank.promotion && <PromotionPanel g={g} />}
@@ -74,6 +76,8 @@ export function Home() {
               if (toggleQuest(q)) setTimeFor(q)
             }}
             onMore={() => setQuestSheet({ quest: q })}
+            onStart={() => toggleStarted(q)}
+            startedXp={startedXp(q, g.config.rules)}
           />
         ))}
         {g.todayQuests.length < MAX_DAILY_QUESTS && (
@@ -89,7 +93,7 @@ export function Home() {
             <IconAlert size={14} />
             {g.todayQuests.length === 0
               ? `未設定のまま日付が変わると −${g.config.rules.penaltyNoQuest}XP（不戦敗）`
-              : `未達成のクエストは日付が変わると1つにつき −${g.config.rules.penaltyMissedQuest}XP`}
+              : `手をつけていないクエストは、日付が変わると1つにつき −${g.config.rules.penaltyMissedQuest}XP。途中でも「着手」を押せばペナルティなし`}
           </div>
         )}
       </section>
@@ -171,6 +175,7 @@ export function Home() {
       <TimeSheet quest={timeFor} onClose={() => setTimeFor(null)} />
       <LogSheet g={g} kind={logKind} onClose={() => setLogKind(null)} />
       <ReviewSheet g={g} open={reviewOpen} onClose={() => setReviewOpen(false)} />
+      <ChallengeSheet g={g} target={challengeOpen ? 'new' : null} onClose={() => setChallengeOpen(false)} />
     </div>
   )
 }
@@ -194,20 +199,22 @@ function ratioMessage(atk: number, def: number, target: number) {
 }
 
 /** 「何のために頑張るのか」を毎日目に入れる */
-function MissionStrip({ g }: { g: Game }) {
+function MissionStrip({ g, onChallenge }: { g: Game; onChallenge: () => void }) {
   const c = g.challenges
   const diff = c.today - c.yesterday
   return (
-    <button className="mission-strip" onClick={() => openPage('vision')}>
-      <div className="body">
+    <div className="mission-strip">
+      <button className="body" onClick={() => openPage('vision')}>
         <div className="m">{g.vision?.mission || '人生の目標を書いて、毎日の行動とつなげよう'}</div>
         <div className="c">
           今日の挑戦<b>{c.today}</b>回 ・ 昨日 {c.yesterday}回
           {diff > 0 ? <span className="up"> ・ 昨日超え</span> : c.today > 0 && diff === 0 ? ' ・ 昨日に並んだ' : ` ・ 通算 ${c.total}回`}
         </div>
-      </div>
-      <span className="go">›</span>
-    </button>
+      </button>
+      <button className="ms-add" onClick={onChallenge} aria-label="挑戦を記録">
+        <IconBolt size={16} />挑戦
+      </button>
+    </div>
   )
 }
 
@@ -235,17 +242,35 @@ function TopBar({ g }: { g: Game }) {
   )
 }
 
-function QuestCard({ q, goalTitle, onToggle, onMore }: { q: WithId<DailyQuest>; goalTitle?: string; onToggle: () => void; onMore: () => void }) {
+interface QuestCardProps {
+  q: WithId<DailyQuest>
+  goalTitle?: string
+  startedXp: number
+  onToggle: () => void
+  onStart: () => void
+  onMore: () => void
+}
+
+function QuestCard({ q, goalTitle, startedXp, onToggle, onStart, onMore }: QuestCardProps) {
+  const started = !q.done && !!q.started
   return (
-    <div className={`quest${q.done ? ' done' : ''}`}>
+    <div className={`quest${q.done ? ' done' : started ? ' started' : ''}`}>
       <button className="quest-main" onClick={onToggle} aria-pressed={q.done}>
-        <Check on={q.done} />
+        <Check on={q.done} half={started} />
         <span className="q-body">
           <span className="q-title">{q.title}</span>
           {goalTitle && <span className="q-link"><i>◆</i>{goalTitle}</span>}
         </span>
-        <span className="q-xp"><span className="stars">{'★'.repeat(q.stars)}</span><span className="x">+{q.xp}</span></span>
+        <span className="q-xp">
+          <span className="stars">{'★'.repeat(q.stars)}</span>
+          <span className="x">+{started ? startedXp : q.xp}</span>
+        </span>
       </button>
+      {!q.done && (
+        <button className={`q-start${started ? ' on' : ''}`} onClick={onStart} aria-pressed={started}>
+          {started ? '着手済' : '着手'}
+        </button>
+      )}
       <button className="q-more" aria-label="編集" onClick={onMore}><IconMore size={18} /></button>
     </div>
   )
@@ -483,6 +508,7 @@ export function ReviewSheet({ g, open, onClose, date }: { g: Game; open: boolean
 
   return (
     <Sheet open={open} onClose={onClose} en="DEBRIEF" ja={target === g.today ? '今日の振り返り' : `${target} の振り返り`}>
+      {target === g.today && <UnfinishedQuests g={g} />}
       <div className="field">
         <label>今日を一言で</label>
         <textarea className="input" value={comment} onChange={(e) => setComment(e.target.value)} placeholder="例：アポは取れた。計画書は逃げた。明日は朝イチでやる。" />
@@ -506,5 +532,24 @@ export function ReviewSheet({ g, open, onClose, date }: { g: Game; open: boolean
         {existing ? '保存する' : `戦績を確定する（+${g.config.rules.review} XP）`}
       </button>
     </Sheet>
+  )
+}
+
+/** 完璧にできない日も、着手したことを記録する */
+function UnfinishedQuests({ g }: { g: Game }) {
+  const list = g.todayQuests.filter((q) => !q.done)
+  if (list.length === 0) return null
+  return (
+    <div className="field">
+      <label>終わっていないクエスト：手をつけたなら「着手」に（半分のXP・ペナルティなし）</label>
+      {list.map((q) => (
+        <div key={q.id} className="act-row">
+          <span className="t">{q.title}</span>
+          <button className={`q-start${q.started ? ' on' : ''}`} onClick={() => toggleStarted(q)} aria-pressed={!!q.started}>
+            {q.started ? `着手済 +${startedXp(q, g.config.rules)}` : '着手した'}
+          </button>
+        </div>
+      ))}
+    </div>
   )
 }

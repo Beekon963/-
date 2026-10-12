@@ -16,6 +16,8 @@ export const IconFlag = (p: P) => <svg {...base(p)}><path d="M5 22V3h11l-2 4 2 4
 export const IconUsers = (p: P) => (
   <svg {...base(p)}><circle cx="9" cy="8" r="3.5" /><path d="M2 20c0-3.5 3-6 7-6s7 2.5 7 6" /><circle cx="17.5" cy="9" r="2.5" /><path d="M17 14c2.8 0 5 1.8 5 4.5" /></svg>
 )
+export const IconBolt = (p: P) => <svg {...base(p)}><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" /></svg>
+export const IconCopy = (p: P) => <svg {...base(p)}><rect x="9" y="9" width="12" height="12" rx="1" /><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" /></svg>
 export const IconChart = (p: P) => <svg {...base(p)}><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg>
 export const IconGear = (p: P) => (
   <svg {...base(p)}>
@@ -41,9 +43,9 @@ export const IconFlame = ({ size = 14 }: { size?: number }) => (
 )
 export const IconAlert = (p: P) => <svg {...base(p)}><path d="M12 3l10 18H2L12 3zM12 10v5M12 18v.5" /></svg>
 
-export function Check({ on }: { on: boolean }) {
+export function Check({ on, half }: { on: boolean; half?: boolean }) {
   return (
-    <span className={`check${on ? ' on' : ''}`}>
+    <span className={`check${on ? ' on' : half ? ' half' : ''}`}>
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#07090d" strokeWidth="4"><polyline points="4 12 10 18 20 6" /></svg>
     </span>
   )

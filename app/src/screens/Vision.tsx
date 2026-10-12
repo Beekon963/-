@@ -83,7 +83,7 @@ function VisionView({ v, g }: { v: VisionData; g: Game }) {
             <div className="l">今日（昨日 {g.challenges.yesterday}）</div>
           </div>
         </div>
-        <p className="help" style={{ textAlign: 'center' }}>挑戦＝達成したデイリー＋攻めの記録。この数字が、ミッションの証明になる。</p>
+        <p className="help" style={{ textAlign: 'center' }}>挑戦＝達成・着手したデイリー＋挑戦ログ。この数字が、ミッションの証明になる。</p>
       </section>
 
       {v.why && (

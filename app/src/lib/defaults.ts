@@ -15,6 +15,9 @@ export const DEFAULT_RULES: XpRules = {
   penaltyMissedQuest: 15,
   penaltyNoQuest: 50,
   restDaysPerWeek: 1,
+  startedPct: 50,
+  challenge: 20,
+  post: 30,
 }
 
 export const DEFAULT_RANKS: RankDef[] = [
@@ -60,6 +63,8 @@ export const DEFAULT_ALERT_DAYS: Record<(typeof PERSON_CATEGORIES)[number], numb
   家族: 14,
   その他: 60,
 }
+
+export const CHALLENGE_RESULT_LABEL = { success: '成功', fail: '失敗', ongoing: '途中' } as const
 
 export const GOAL_LEVEL_LABEL = { main: '大目標', mid: '中目標', small: '小目標' } as const
 export const GOAL_CHILD_LEVEL = { main: 'mid', mid: 'small', small: null } as const

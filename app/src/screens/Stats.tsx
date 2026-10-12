@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { IconChevron } from '../components/Icons'
-import { formatJa, formatShort, addDays } from '../lib/date'
-import { achievementPct, attackPct, weeklyStats, type WeekStat, type XpEntry } from '../lib/game'
+import { formatJa, formatShort, addDays, weekStart } from '../lib/date'
+import { achievementPct, attackPct, challengesByDate, weeklyStats, type WeekStat, type XpEntry } from '../lib/game'
 import { useGame } from '../store/game'
 import { ReviewSheet } from './Home'
 
@@ -18,6 +18,14 @@ export function Stats() {
   const [reviewDate, setReviewDate] = useState<string | null>(null)
   const [showAllLog, setShowAllLog] = useState(false)
   const weeks = useMemo(() => weeklyStats(g.today, WEEKS, g.entries, g.quests, g.activities), [g.today, g.entries, g.quests, g.activities])
+  const weekChallenges = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const [date, n] of challengesByDate(g.quests, g.challengeLogs)) {
+      const ws = weekStart(date)
+      map.set(ws, (map.get(ws) ?? 0) + n)
+    }
+    return map
+  }, [g.quests, g.challengeLogs])
   const cur = weeks[weeks.length - 1]
   const curNet = cur.gain + cur.loss
   const ach = achievementPct(cur)
@@ -65,7 +73,7 @@ export function Stats() {
           <h3>週ごとの数字</h3>
           <table className="week-table">
             <thead>
-              <tr><th>週</th><th>獲得</th><th>減少</th><th>達成率</th><th>攻め率</th></tr>
+              <tr><th>週</th><th>獲得</th><th>減少</th><th>達成率</th><th>攻め率</th><th>挑戦</th></tr>
             </thead>
             <tbody>
               {[...weeks].reverse().map((w) => (
@@ -75,6 +83,7 @@ export function Stats() {
                   <td className={w.loss ? 'neg' : ''}>{w.loss || 0}</td>
                   <td>{achievementPct(w) ?? '--'}%</td>
                   <td>{attackPct(w) ?? '--'}%</td>
+                  <td>{weekChallenges.get(w.start) ?? 0}</td>
                 </tr>
               ))}
             </tbody>

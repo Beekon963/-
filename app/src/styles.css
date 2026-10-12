@@ -290,7 +290,7 @@ select.input { background-image:linear-gradient(45deg,transparent 50%,var(--sub)
 
 /* ===== nav ===== */
 .nav { position:fixed; left:50%; bottom:0; transform:translateX(-50%); width:100%; max-width:480px; z-index:20;
-  display:grid; grid-template-columns:repeat(4,1fr); background:rgba(9,11,16,.94); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  display:grid; grid-template-columns:repeat(5,1fr); background:rgba(9,11,16,.94); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
   border-top:1px solid var(--line2); padding:8px 0 calc(8px + var(--safe-bottom)); }
 .nav button { display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--mute); font-size:10px; font-weight:700; position:relative; padding:2px 0; }
 .nav button.on { color:var(--rank); }
@@ -448,3 +448,35 @@ select.input { background-image:linear-gradient(45deg,transparent 50%,var(--sub)
 .vis-goal { display:block; width:100%; text-align:left; background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--atk); padding:12px 14px; margin-bottom:6px; }
 .vis-goal .t { font-size:14px; font-weight:700; line-height:1.5; }
 .vis-rule { font-size:15px; font-weight:700; line-height:1.9; padding:14px 16px; border-left:3px solid var(--rank); background:var(--panel); white-space:pre-wrap; }
+
+/* ===== 着手 ===== */
+.check.half { border-color:var(--rank); background:linear-gradient(135deg,var(--rank) 0 50%,transparent 50%); }
+.quest.started { border-left-color:var(--rank-lo); }
+.q-start { flex-shrink:0; font-size:11px; font-weight:700; padding:6px 8px; border:1px solid var(--line3); color:var(--sub); white-space:nowrap; }
+.q-start.on { border-color:var(--rank); color:var(--rank); background:rgba(255,255,255,.05); }
+
+/* ===== mission strip（ホーム：本文＋挑戦ボタン） ===== */
+.mission-strip > .body { text-align:left; }
+div.mission-strip { padding:0; align-items:stretch; }
+div.mission-strip > .body { padding:9px 4px 9px 12px; }
+.ms-add { flex-shrink:0; display:flex; align-items:center; gap:4px; padding:0 12px; font-size:12px; font-weight:900;
+  color:var(--bg); background:var(--rank); clip-path:polygon(8px 0,100% 0,100% 100%,0 100%); }
+.ms-add:active { filter:brightness(1.15); }
+
+/* ===== challenge log ===== */
+.ch-item { background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--rank); margin-bottom:8px; }
+.ch-main { display:block; width:100%; text-align:left; padding:12px 14px 8px; }
+.ch-head { display:flex; align-items:center; gap:8px; font-size:11px; color:var(--sub); }
+.ch-no { font-family:var(--hud); font-weight:700; font-size:14px; color:var(--rank); }
+.ch-date { font-family:var(--hud); font-weight:600; }
+.ch-res { font-size:10px; font-weight:700; padding:1px 7px; border:1px solid var(--line3); }
+.ch-res.res-success { border-color:var(--rank); color:var(--rank); }
+.ch-res.res-fail { border-color:rgba(255,70,85,.6); color:var(--atk); }
+.ch-post { margin-left:auto; font-size:10px; font-weight:700; padding:1px 7px; background:var(--rank); color:var(--bg); }
+.ch-post.idea { background:transparent; color:var(--sub); border:1px dashed var(--line3); }
+.ch-title { font-size:15px; font-weight:900; line-height:1.5; margin-top:6px; word-break:break-word; }
+.ch-learn { font-size:13px; color:var(--sub); line-height:1.7; margin-top:4px; white-space:pre-wrap; word-break:break-word; }
+.ch-actions { display:flex; gap:6px; flex-wrap:wrap; padding:0 14px 12px; }
+.ch-actions:empty { display:none; }
+.chip.res-fail.on { background:var(--atk); border-color:var(--atk); color:#fff; }
+.chip.res-ongoing.on { background:#5d6b7e; border-color:#7a889c; color:#fff; }
