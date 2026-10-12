@@ -40,6 +40,12 @@ export interface XpRules {
   /** デイリーを1つも設定しなかった日に減るXP */
   penaltyNoQuest: number
   restDaysPerWeek: number
+  /** 着手したデイリーに入るXPの割合（%） */
+  startedPct: number
+  /** 挑戦ログ1件 */
+  challenge: number
+  /** 挑戦を発信した */
+  post: number
 }
 
 export interface Config {
@@ -74,6 +80,8 @@ export interface DailyQuest {
   stars: Stars
   xp: number
   done: boolean
+  /** 着手した（途中まで）。XPは一部、ペナルティなし */
+  started?: boolean
   createdAt: number
 }
 
@@ -117,8 +125,52 @@ export interface Review {
   createdAt: number
 }
 
+export type ChallengeResult = 'success' | 'fail' | 'ongoing'
+/** none = 発信しない / idea = 発信ネタ帳 / posted = 発信済み */
+export type PostStatus = 'none' | 'idea' | 'posted'
+
+/** 挑戦ログ：成功でも失敗でも「やってみた」を残す */
+export interface Challenge {
+  date: string
+  title: string
+  result: ChallengeResult
+  learning?: string
+  goalId?: string
+  post: PostStatus
+  postedDate?: string
+  xp: number
+  postXp?: number
+  createdAt: number
+}
+
 export interface RestDay {
   date: string
+}
+
+export interface VisionValue {
+  name: string
+  text: string
+  /** いちばん大切にする価値観 */
+  core?: boolean
+}
+
+export interface VisionMilestone {
+  year: number
+  age?: number
+  title: string
+  text?: string
+}
+
+/** 人生の目標（「何のために頑張るのか」） */
+export interface Vision {
+  mission: string
+  statement?: string
+  why?: string
+  values: VisionValue[]
+  milestones: VisionMilestone[]
+  dream?: string
+  dailyRule?: string
+  purpose?: string
 }
 
 export interface RecordMap {
@@ -131,6 +183,8 @@ export interface RecordMap {
   contact: Contact
   review: Review
   rest: RestDay
+  vision: Vision
+  challenge: Challenge
 }
 
 export type RecType = keyof RecordMap

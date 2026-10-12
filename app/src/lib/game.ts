@@ -3,10 +3,11 @@
 import { addDays, daysBetween, weekStart } from './date'
 import { MAX_DAILY_QUESTS } from './defaults'
 import type {
-  Activity, Config, Contact, DailyQuest, Goal, Person, RankCondition, RankDef, Review, WithId, XpRules,
+  Activity, Challenge, Config, Contact, DailyQuest, Goal, Person, RankCondition, RankDef, Review, WithId, XpRules,
 } from './types'
 
-export type XpKind = 'quest' | 'perfect' | 'activity' | 'goal' | 'contact' | 'review' | 'streak' | 'penalty'
+export type XpKind =
+  | 'quest' | 'started' | 'perfect' | 'activity' | 'goal' | 'contact' | 'review' | 'challenge' | 'post' | 'streak' | 'penalty'
 
 export interface XpEntry {
   date: string
@@ -25,6 +26,7 @@ export interface GameData {
   goals: WithId<Goal>[]
   contacts: WithId<Contact>[]
   reviews: WithId<Review>[]
+  challenges: WithId<Challenge>[]
   rests: Set<string>
 }
 
@@ -39,13 +41,22 @@ function groupBy<T>(items: T[], key: (item: T) => string) {
   return map
 }
 
+export function startedXp(q: Pick<DailyQuest, 'xp'>, rules: XpRules) {
+  return Math.floor((q.xp * rules.startedPct) / 100)
+}
+
+/** 達成でも着手でもない＝手をつけていない */
+export function untouched(q: Pick<DailyQuest, 'done' | 'started'>) {
+  return !q.done && !q.started
+}
+
 export function activityXp(minutes: number, kind: Activity['kind'], rules: XpRules) {
   const per30 = kind === 'attack' ? rules.attackPer30 : rules.defensePer30
   return Math.round((minutes / 30) * per30)
 }
 
 /**
- * XP台帳を作る。降格ペナルティ（過去日のデイリー未達成・未設定）と
+ * XP台帳を作る。降格ペナルティ（過去日のデイリー未着手・未設定）と
  * 連続日数ボーナスもここで決まる。開始日は猶予日としてペナルティ対象外。
  */
 export function buildLedger(g: GameData) {
@@ -55,6 +66,9 @@ export function buildLedger(g: GameData) {
 
   for (const q of g.quests) {
     if (q.done) entries.push({ date: q.date, amount: q.xp, kind: 'quest', label: q.title, refId: q.id })
+    else if (q.started) {
+      entries.push({ date: q.date, amount: startedXp(q, rules), kind: 'started', label: `着手：${q.title}`, refId: q.id })
+    }
   }
   for (const [date, qs] of questsByDate) {
     if (qs.length >= MAX_DAILY_QUESTS && qs.every((q) => q.done)) {
@@ -75,11 +89,17 @@ export function buildLedger(g: GameData) {
   for (const r of g.reviews) {
     entries.push({ date: r.date, amount: r.xp, kind: 'review', label: '振り返り', refId: r.id })
   }
+  for (const c of g.challenges) {
+    entries.push({ date: c.date, amount: c.xp, kind: 'challenge', label: `挑戦：${c.title}`, refId: c.id })
+    if (c.post === 'posted' && c.postedDate && c.postXp) {
+      entries.push({ date: c.postedDate, amount: c.postXp, kind: 'post', label: `発信：${c.title}`, refId: c.id })
+    }
+  }
 
   let streak = 0
   for (let d = g.startDate; d <= g.today; d = addDays(d, 1)) {
     const qs = questsByDate.get(d) ?? []
-    const active = qs.some((q) => q.done)
+    const active = qs.some((q) => !untouched(q))
     const rest = g.rests.has(d)
     const past = d < g.today
 
@@ -96,10 +116,10 @@ export function buildLedger(g: GameData) {
       if (qs.length === 0) {
         entries.push({ date: d, amount: -rules.penaltyNoQuest, kind: 'penalty', label: 'デイリー未設定（不戦敗）' })
       } else {
-        const missed = qs.filter((q) => !q.done).length
+        const missed = qs.filter(untouched).length
         if (missed > 0) {
           entries.push({
-            date: d, amount: -missed * rules.penaltyMissedQuest, kind: 'penalty', label: `デイリー未達成 ×${missed}`,
+            date: d, amount: -missed * rules.penaltyMissedQuest, kind: 'penalty', label: `デイリー未着手 ×${missed}`,
           })
         }
       }
@@ -298,6 +318,17 @@ export function weeklyStats(
     out.push({ start, ...(map.get(start) ?? emptyStat()) })
   }
   return out
+}
+
+// ---------- 挑戦回数 ----------
+
+/** 挑戦＝達成・着手したデイリー＋挑戦ログ */
+export function challengesByDate(quests: DailyQuest[], logs: Pick<Challenge, 'date'>[]) {
+  const map = new Map<string, number>()
+  const add = (date: string) => map.set(date, (map.get(date) ?? 0) + 1)
+  for (const q of quests) if (!untouched(q)) add(q.date)
+  for (const c of logs) add(c.date)
+  return map
 }
 
 // ---------- 目標 ----------

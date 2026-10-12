@@ -69,7 +69,12 @@ function ResultView({ g, onClose }: { g: Game; onClose: () => void }) {
   const s = g.todayStat
   const set = g.todayQuests.length
   const done = g.todayQuests.filter((q) => q.done).length
-  const verdict = set > 0 && done === set && set >= 3 ? 'PERFECT' : done > 0 ? 'VICTORY' : g.isRestDay ? 'REST' : 'DEFEAT'
+  const started = g.todayQuests.filter((q) => !q.done && q.started).length
+  const verdict =
+    set > 0 && done === set && set >= 3 ? 'PERFECT'
+      : done > 0 ? 'VICTORY'
+        : started > 0 || g.challenges.today > 0 ? 'NICE TRY'
+          : g.isRestDay ? 'REST' : 'DEFEAT'
   const win = verdict !== 'DEFEAT'
   const net = s.gain + s.loss
   const pct = attackPct(s)
@@ -82,9 +87,9 @@ function ResultView({ g, onClose }: { g: Game; onClose: () => void }) {
         <div className="sub" style={{ fontSize: 12 }}>{g.today.replace(/-/g, '.')}</div>
         <div className="result-grid">
           <div className="stat xp"><div className="v">{net >= 0 ? '+' : ''}{net}</div><div className="l">獲得XP</div></div>
-          <div className="stat"><div className="v">{done}<small>/{set}</small></div><div className="l">クエスト達成</div></div>
+          <div className="stat"><div className="v">{done}<small>/{set}</small></div><div className="l">クエスト達成{started ? `・着手${started}` : ''}</div></div>
           <div className="stat atk"><div className="v">{pct ?? '--'}<small>%</small></div><div className="l">攻め率</div></div>
-          <div className="stat"><div className="v">{g.streak}<small>日</small></div><div className="l">連続達成</div></div>
+          <div className="stat"><div className="v">{g.challenges.today}<small>回</small></div><div className="l">今日の挑戦（昨日 {g.challenges.yesterday}）</div></div>
         </div>
         {g.todayReview?.comment && <div className="result-comment">{g.todayReview.comment}</div>}
         <div className="gauge-head"><span>{g.rank.fullName}</span><span>{g.rank.next ? `→ ${g.rank.next.name}` : 'MAX'}</span></div>

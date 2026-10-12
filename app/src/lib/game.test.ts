@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { addDays, logicalToday, weekStart } from './date'
 import { DEFAULT_CONFIG, DEFAULT_RANKS } from './defaults'
 import {
-  activityXp, buildLedger, computeRank, goalProgress, childrenMap, personStatus, summarize, weeklyStats,
+  activityXp, buildLedger, challengesByDate, computeRank, goalProgress, childrenMap, personStatus, summarize, weeklyStats,
   type GameData,
 } from './game'
 import type { DailyQuest, Goal, RankDef, WithId } from './types'
@@ -16,7 +16,7 @@ function game(partial: Partial<GameData>): GameData {
     config: DEFAULT_CONFIG,
     startDate: '2026-10-01',
     today: '2026-10-01',
-    quests: [], activities: [], goals: [], contacts: [], reviews: [],
+    quests: [], activities: [], goals: [], contacts: [], reviews: [], challenges: [],
     rests: new Set(),
     ...partial,
   }
@@ -163,5 +163,62 @@ describe('stats', () => {
     const s = personStatus(p, [{ personId: 'x', date: '2026-09-01', method: '電話', xp: 10, createdAt: 0 }], '2026-10-12', '2026-08-01')
     expect(s.daysSince).toBe(41)
     expect(s.overdue).toBe(true)
+  })
+})
+
+describe('challenges', () => {
+  it('counts done or started quests plus challenge logs', () => {
+    const d = '2026-10-12'
+    const started = { ...quest(d, false), started: true }
+    const map = challengesByDate(
+      [quest(d, true), started, quest(d, false), quest('2026-10-11', true)],
+      [{ date: d }, { date: '2026-10-10' }],
+    )
+    expect(map.get(d)).toBe(3)
+    expect(map.get('2026-10-11')).toBe(1)
+    expect(map.get('2026-10-10')).toBe(1)
+  })
+})
+
+describe('started quests', () => {
+  it('earn half XP, avoid the penalty and keep the streak', () => {
+    const g = game({
+      startDate: '2026-10-01',
+      today: '2026-10-04',
+      quests: [
+        quest('2026-10-02', true, 40),
+        { ...quest('2026-10-03', false, 40), started: true },
+        quest('2026-10-03', false, 40),
+      ],
+    })
+    const { entries, streak } = buildLedger(g)
+    expect(entries.find((e) => e.kind === 'started')?.amount).toBe(20)
+    // 10/03: 着手1つはペナルティなし、未着手1つだけ -15
+    expect(entries.filter((e) => e.kind === 'penalty').map((e) => [e.date, e.amount])).toEqual([['2026-10-03', -15]])
+    expect(streak).toBe(2)
+  })
+
+  it('do not count toward PERFECT', () => {
+    const d = '2026-10-01'
+    const qs = [quest(d, true), quest(d, true), { ...quest(d, false), started: true }]
+    expect(buildLedger(game({ quests: qs })).entries.some((e) => e.kind === 'perfect')).toBe(false)
+  })
+})
+
+describe('challenge log', () => {
+  it('pays for every attempt and again when it is posted', () => {
+    const base = { title: '新規営業トーク', result: 'fail' as const, xp: 20, createdAt: 0 }
+    const g = game({
+      today: '2026-10-05',
+      challenges: [
+        { ...base, id: 'c1', date: '2026-10-02', post: 'posted', postedDate: '2026-10-04', postXp: 30 },
+        { ...base, id: 'c2', date: '2026-10-03', post: 'idea' },
+      ],
+      rests: new Set(['2026-10-02', '2026-10-03', '2026-10-04']),
+    })
+    const { entries } = buildLedger(g)
+    expect(entries.filter((e) => e.kind === 'challenge').length).toBe(2)
+    expect(entries.filter((e) => e.kind === 'post').map((e) => [e.date, e.amount])).toEqual([['2026-10-04', 30]])
+    expect(summarize(entries).total).toBe(70)
   })
 })

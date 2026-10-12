@@ -17,9 +17,12 @@ const RULE_ROWS: { key: NumKey; label: string }[] = [
   { key: 'review', label: '振り返り' },
   { key: 'streakEvery', label: '連続ボーナスの間隔（日）' },
   { key: 'streakBonus', label: '連続ボーナス' },
-  { key: 'penaltyMissedQuest', label: '降格：未達成デイリー1つ' },
+  { key: 'penaltyMissedQuest', label: '降格：未着手デイリー1つ' },
   { key: 'penaltyNoQuest', label: '降格：デイリー未設定の日' },
   { key: 'restDaysPerWeek', label: '休息日（週あたり回数）' },
+  { key: 'startedPct', label: '着手したデイリーのXP（%）' },
+  { key: 'challenge', label: '挑戦ログ1件' },
+  { key: 'post', label: '挑戦を発信した' },
 ]
 
 export function Settings() {
@@ -110,6 +113,11 @@ export function Settings() {
       </div>
 
       <div className="set-group">
+        <h3>VISION</h3>
+        <button className="set-row" onClick={() => openPage('vision')}>人生の目標を見る・編集<span className="v">›</span></button>
+      </div>
+
+      <div className="set-group">
         <h3>RANKS</h3>
         <button className="set-row" onClick={() => openPage('ranks', { rankEdit: true })}>ランク表・昇格条件を編集<span className="v">›</span></button>
       </div>
@@ -171,7 +179,7 @@ export function Settings() {
       <div className="set-group">
         <h3>DATA</h3>
         <button className="set-row" onClick={download}>バックアップを書き出す（JSON）<span className="v">›</span></button>
-        <button className="set-row" onClick={() => fileRef.current?.click()}>バックアップから読み込む<span className="v">›</span></button>
+        <button className="set-row" onClick={() => fileRef.current?.click()}>バックアップ・初期データを読み込む<span className="v">›</span></button>
         <input
           ref={fileRef} type="file" accept="application/json,.json" hidden
           onChange={(e) => {

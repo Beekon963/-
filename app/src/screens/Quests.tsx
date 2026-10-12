@@ -6,6 +6,7 @@ import { GOAL_CHILD_LEVEL, GOAL_LEVEL_LABEL } from '../lib/defaults'
 import { childrenMap, goalProgress } from '../lib/game'
 import type { Goal, GoalLevel, WithId } from '../lib/types'
 import { addGoal, deleteGoal, editGoal, toggleGoal, useGame, type Game } from '../store/game'
+import { openPage } from '../store/ui'
 
 type SheetState = { mode: 'add'; level: GoalLevel; parentId: string | null } | { mode: 'edit'; goal: WithId<Goal> } | null
 
@@ -31,6 +32,13 @@ export function Quests() {
       </div>
 
       <div className="sec">
+        <button className="mission-strip" style={{ width: '100%', margin: '0 0 12px' }} onClick={() => openPage('vision')}>
+          <div className="body">
+            <div className="m">{g.vision?.mission || '人生の目標（VISION）を書く'}</div>
+            <div className="c">すべてのクエストは、ここにつながっている</div>
+          </div>
+          <span className="go">›</span>
+        </button>
         {active.length === 0 && (
           <div className="empty">
             <b>NO MAIN QUEST</b>

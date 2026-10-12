@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 
-export type Tab = 'home' | 'quests' | 'squad' | 'stats'
-export type Page = 'ranks' | 'settings' | null
+export type Tab = 'home' | 'quests' | 'challenge' | 'squad' | 'stats'
+export type Page = 'ranks' | 'settings' | 'vision' | null
 
 export interface Toast {
   id: number

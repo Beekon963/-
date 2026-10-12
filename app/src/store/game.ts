@@ -3,10 +3,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { logicalToday, weekStart, addDays } from '../lib/date'
 import { DEFAULT_CONFIG, MAX_DAILY_QUESTS } from '../lib/defaults'
-import { activityXp, buildLedger, computeRank, dayStat, summarize } from '../lib/game'
+import { activityXp, buildLedger, challengesByDate, computeRank, dayStat, startedXp, summarize, untouched } from '../lib/game'
 import type {
-  Activity, ActivityKind, Config, Contact, ContactMethod, DailyQuest, Goal, GoalLevel, Person, Rec, RecordMap,
-  RecType, Review, Stars, WithId,
+  Activity, ActivityKind, Challenge, ChallengeResult, Config, Contact, ContactMethod, DailyQuest, Goal, GoalLevel, Person, Rec, RecordMap,
+  PostStatus, RecType, Review, Stars, Vision, WithId,
 } from '../lib/types'
 import { newId, patch, put, remove, useData } from './data'
 import { toast } from './ui'
@@ -27,7 +27,7 @@ type Lists = {
 
 function collectLists(records: Record<string, Rec>): Lists {
   const lists: Lists = {
-    config: [], profile: [], goal: [], quest: [], activity: [], person: [], contact: [], review: [], rest: [],
+    config: [], profile: [], goal: [], quest: [], activity: [], person: [], contact: [], review: [], rest: [], vision: [], challenge: [],
   }
   for (const r of Object.values(records)) {
     if (r.deleted || !lists[r.type]) continue
@@ -48,16 +48,28 @@ export function deriveGame(records: Record<string, Rec>, now: Date) {
   const { entries, streak } = buildLedger({
     config, startDate, today, rests,
     quests: lists.quest, activities: lists.activity, goals: lists.goal, contacts: lists.contact, reviews: lists.review,
+    challenges: lists.challenge,
   })
   const { total } = summarize(entries)
   const rank = computeRank(total, config.ranks)
   const todayStat = dayStat(today, entries, lists.quest, lists.activity)
+
+  const vision = records.vision && !records.vision.deleted ? (records.vision.data as Vision) : null
+  const challengeMap = challengesByDate(lists.quest, lists.challenge)
+  let challengeTotal = 0
+  for (const n of challengeMap.values()) challengeTotal += n
 
   const ws = weekStart(today)
   const restsThisWeek = lists.rest.filter((r) => r.date >= ws && r.date <= addDays(ws, 6)).length
 
   return {
     config,
+    vision,
+    challenges: {
+      total: challengeTotal,
+      today: challengeMap.get(today) ?? 0,
+      yesterday: challengeMap.get(addDays(today, -1)) ?? 0,
+    },
     today,
     startDate,
     hasProfile: !!profile,
@@ -78,6 +90,8 @@ export function deriveGame(records: Record<string, Rec>, now: Date) {
     persons: lists.person.sort(byCreated),
     contacts: lists.contact.sort((a, b) => (a.date === b.date ? a.createdAt - b.createdAt : a.date < b.date ? -1 : 1)),
     reviews: lists.review.sort((a, b) => (a.date < b.date ? 1 : -1)),
+    /** 新しい順 */
+    challengeLogs: lists.challenge.sort((a, b) => (a.date === b.date ? b.createdAt - a.createdAt : a.date < b.date ? 1 : -1)),
   }
 }
 
@@ -161,11 +175,23 @@ export function toggleQuest(q: WithId<DailyQuest>) {
     toast(-q.xp, 'クエスト取り消し')
     return false
   }
-  patch('quest', q.id, { done: true })
+  patch('quest', q.id, { done: true, started: false })
   const willBePerfect = g.todayQuests.length >= MAX_DAILY_QUESTS && g.todayQuests.every((x) => x.done || x.id === q.id)
   toast(q.xp, 'QUEST CLEAR')
   if (willBePerfect) setTimeout(() => toast(g.config.rules.perfectBonus, 'PERFECT'), 450)
   return true
+}
+
+/** 着手（途中まで）を切り替える。達成済みには使わない */
+export function toggleStarted(q: WithId<DailyQuest>) {
+  if (q.done) return
+  const rules = current().config.rules
+  patch('quest', q.id, { started: !q.started })
+  toast(q.started ? -startedXp(q, rules) : startedXp(q, rules), q.started ? '着手を取り消し' : '着手')
+}
+
+export function untouchedToday() {
+  return current().todayQuests.filter(untouched)
 }
 
 // ---------- 攻め・守り ----------
@@ -298,4 +324,54 @@ export function setConditionCleared(rankId: string, condId: string, cleared: boo
           },
     ),
   })
+}
+
+// ---------- 人生の目標 ----------
+
+export function saveVision(vision: Vision) {
+  put('vision', 'vision', vision)
+}
+
+// ---------- 挑戦ログ ----------
+
+export interface ChallengeInput {
+  title: string
+  result: ChallengeResult
+  learning?: string
+  goalId?: string
+  post: PostStatus
+}
+
+function postFields(prev: Challenge | undefined, post: PostStatus, today: string, postXp: number) {
+  if (post !== 'posted') return { postedDate: undefined, postXp: undefined }
+  if (prev?.post === 'posted' && prev.postedDate) return { postedDate: prev.postedDate, postXp: prev.postXp }
+  return { postedDate: today, postXp }
+}
+
+export function saveChallenge(id: string | null, input: ChallengeInput) {
+  const g = current()
+  const prev = id ? g.challengeLogs.find((c) => c.id === id) : undefined
+  const challenge: Challenge = {
+    date: prev?.date ?? g.today,
+    title: input.title.trim(),
+    result: input.result,
+    learning: input.learning?.trim() || undefined,
+    goalId: input.goalId || undefined,
+    post: input.post,
+    ...postFields(prev, input.post, g.today, g.config.rules.post),
+    xp: prev?.xp ?? g.config.rules.challenge,
+    createdAt: prev?.createdAt ?? Date.now(),
+  }
+  put('challenge', id ?? newId(), challenge)
+  if (!prev) toast(challenge.xp, input.result === 'fail' ? 'NICE TRY' : 'CHALLENGE')
+  if (challenge.post === 'posted' && prev?.post !== 'posted') setTimeout(() => toast(challenge.postXp ?? 0, 'POSTED'), prev ? 0 : 450)
+}
+
+export function setPostStatus(c: WithId<Challenge>, post: PostStatus) {
+  const { id, ...data } = c
+  saveChallenge(id, { ...data, post })
+}
+
+export function deleteChallenge(id: string) {
+  remove(id)
 }
