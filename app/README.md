@@ -1,0 +1,60 @@
+# LIFE RANKED
+
+人生をランクマッチにする。自分の行動が XP になり、ランクが上がる（サボると下がる）個人用ゲームアプリ。
+
+- 公開 URL（main にマージ後）：`https://beekon963.github.io/-/life-rank/`
+- スマホでは「ホーム画面に追加」して使う（iPhone は Safari の共有ボタン →「ホーム画面に追加」）
+
+## ゲームのルール（初期値・設定画面で変更可）
+
+| 行動 | XP |
+|---|---|
+| デイリー達成 ★ / ★★ / ★★★ | +20 / +40 / +60 |
+| デイリー3つ全達成（PERFECT） | +30 |
+| 攻めの行動 30分 | +10 |
+| 守りの業務 30分 | +2 |
+| 小 / 中 / 大目標の達成 | +100 / +300 / +1000 |
+| 人脈「連絡した」・振り返り | +10 |
+| 7日連続ボーナス | +50 |
+| **降格**：未達成のデイリー（日付が変わった時点） | 1つにつき −15 |
+| **降格**：デイリーを1つも設定しなかった日 | −50 |
+
+- XP が減ればランクも下がる。XP は 0 未満にはならない
+- 休息日は週1回まで（ペナルティなし・連続日数も途切れない）。使い始めた初日もペナルティ対象外
+- 1日の切り替わりは朝4時（深夜の作業は前日扱い）
+- 次のランクの XP に届いても、昇格条件が残っていれば「昇格戦」。条件を自分でクリアにすると昇格
+
+## ログイン・同期の準備（Supabase・無料）
+
+スマホと PC で同じデータを使うために、無料の Supabase を使う。最初の1回だけ。
+
+1. https://supabase.com でアカウントを作り「New project」を作成（Region は Tokyo）
+2. 左メニュー **SQL Editor** を開き、[`supabase/schema.sql`](supabase/schema.sql) の中身を貼り付けて **Run**
+3. **Authentication → Sign In / Providers → Email** で「Confirm email」をオフ（個人用なので確認メール不要）
+4. **Project Settings → API Keys** で次の2つを控える
+   - Project URL（`https://xxxx.supabase.co`）
+   - `anon` `public` キー（または `sb_publishable_...` で始まるキー）
+5. アプリを開き、URL とキーを入力 →「アカウント作成」→ ログイン
+6. 自分のアカウントを作り終えたら、**Authentication → Sign In / Providers** で「Allow new users to sign up」をオフ（他人が登録できないように）
+
+- anon / publishable キーは公開されても大丈夫な鍵（行レベルセキュリティで自分のデータしか読めない）。**`service_role` / secret キーは絶対に貼らないこと**
+- URL とキーを `app/.env` に書いてビルドすると、入力画面を省略できる（`.env.example` 参照）
+- 無料プランは1週間アクセスがないと一時停止される。毎日使っていれば問題なし
+
+## 開発
+
+```bash
+cd app
+npm install
+npm run dev        # 開発サーバー
+npm test           # ゲームロジックのテスト
+npm run build      # ../life-rank/ にビルド（これをコミットすると GitHub Pages に反映）
+```
+
+### 構成
+
+- `src/lib/game.ts` … XP・ランク・降格・連続日数の計算（XP は保存せず、記録から毎回計算）
+- `src/store/data.ts` … 端末内のデータ（IndexedDB）
+- `src/store/cloud.ts` … Supabase のログインと同期（端末で変更 → 送信 → 差分を取り込み）
+- `src/screens/` … 各画面
+- `supabase/schema.sql` … データベースの定義
