@@ -94,7 +94,7 @@ function GoalCard({ goal, kids, g, onSheet }: { goal: WithId<Goal>; kids: Map<st
           {goal.why && <div className="goal-why">{goal.why}</div>}
           <div className="goal-meta">
             <span className="xp">+{goal.xp} XP</span>
-            {dl && <span style={dl.includes('超過') ? { color: 'var(--atk)' } : undefined}>{dl}</span>}
+            {dl && <span style={dl.includes('超過') ? { color: 'var(--danger)' } : undefined}>{dl}</span>}
             {goal.deadline && <span>{formatJa(goal.deadline)}まで</span>}
           </div>
         </div>
@@ -149,7 +149,7 @@ function GoalRow({ goal, extra, onSheet, today }: { goal: WithId<Goal>; extra?: 
       <button onClick={() => confirmToggle(goal)} aria-label="達成"><Check on={goal.done} /></button>
       <div className="t">
         {goal.title}
-        {dl && !goal.done && <div className="help" style={{ marginTop: 2, color: dl.includes('超過') ? 'var(--atk)' : undefined }}>{dl}</div>}
+        {dl && !goal.done && <div className="help" style={{ marginTop: 2, color: dl.includes('超過') ? 'var(--danger)' : undefined }}>{dl}</div>}
       </div>
       {extra && <span className="mini">{extra}</span>}
       <span className="mini" style={{ color: 'var(--rank)' }}>+{goal.xp}</span>

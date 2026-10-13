@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react'
+import { CountUp } from '../components/CountUp'
+import { Emblem } from '../components/Emblem'
 import { IconChevron } from '../components/Icons'
 import { formatJa, formatShort, addDays, weekStart } from '../lib/date'
 import { achievementPct, attackPct, challengesByDate, weeklyStats, type WeekStat, type XpEntry } from '../lib/game'
@@ -8,6 +10,7 @@ import { ReviewSheet } from './Home'
 const WEEKS = 8
 const GAIN = '#4f8dff'
 const LOSS = '#ff4655'
+const ATK = '#e0730c'
 const W = 340
 const PLOT_H = 130
 const AXIS_H = 20
@@ -45,12 +48,28 @@ export function Stats() {
 
   return (
     <div className="fade-in">
-      <div className="page-title">
-        <div>
-          <h1>CAREER</h1>
-          <div className="ja">戦績 ・ 総XP {g.total.toLocaleString()} ・ {g.rank.fullName}</div>
+      <section className="career">
+        <div className="scan" />
+        <div className="career-top">
+          <Emblem
+            color={g.rank.rank.color} index={g.rank.index} total={g.rank.ranks.length}
+            division={g.rank.division} divisions={g.rank.rank.divisions} size={92}
+          />
+          <div>
+            <div className="kicker">CAREER</div>
+            <div className="career-rank">{g.rank.fullName}</div>
+            <div className="career-sub"><CountUp value={g.total} /> XP ・ ROUND {g.career.days}</div>
+          </div>
         </div>
-      </div>
+        <div className="career-grid">
+          <div><b>{g.career.winRate ?? '--'}<small>%</small></b><span>勝率（達成した日）</span></div>
+          <div><b>{g.career.bestStreak}<small>日</small></b><span>最長連続</span></div>
+          <div><b className="peak" style={{ color: g.career.peak.rank.color }}>{g.career.peak.fullName}</b><span>最高ランク</span></div>
+          <div><b><CountUp value={g.challenges.total} /></b><span>通算の挑戦</span></div>
+          <div><b>{Math.floor(g.career.attackMin / 60)}<small>h</small></b><span>攻めた時間</span></div>
+          <div><b>{g.career.posts}</b><span>発信した挑戦</span></div>
+        </div>
+      </section>
 
       <div className="strip">
         <div className={`stat xp${curNet < 0 ? ' neg' : ''}`}><div className="v">{curNet >= 0 ? '+' : ''}{curNet}</div><div className="l">今週のXP</div></div>
@@ -66,7 +85,7 @@ export function Stats() {
           weeks={weeks} value={achievementPct}
         />
         <PctChart
-          title="攻め率" caption="攻めの時間 ÷（攻め＋守りの時間）" color={LOSS}
+          title="攻め率" caption="攻めの時間 ÷（攻め＋守りの時間）" color={ATK}
           weeks={weeks} value={attackPct} target={g.config.attackTargetPct}
         />
         <div className="chart-card">
@@ -98,7 +117,7 @@ export function Stats() {
           const net = list.reduce((s, e) => s + e.amount, 0)
           return (
             <div key={date} className="log-day">
-              <h4><span>{formatJa(date)}</span><span style={{ color: net < 0 ? 'var(--atk)' : 'var(--rank)' }}>{net >= 0 ? '+' : ''}{net}</span></h4>
+              <h4><span>{formatJa(date)}</span><span style={{ color: net < 0 ? 'var(--danger)' : 'var(--rank)' }}>{net >= 0 ? '+' : ''}{net}</span></h4>
               {list.map((e, i) => (
                 <div key={i} className="log-entry">
                   <span>{e.label}</span>

@@ -87,12 +87,12 @@ export function Settings() {
           <>
             <div className="set-row">ログイン中<span className="v">{cloud.email}</span></div>
             <button className="set-row" onClick={() => void syncNow()}>
-              同期<span className="v" style={cloud.syncState === 'error' ? { color: 'var(--atk)' } : undefined}>{syncLabel} ・ 今すぐ同期</span>
+              同期<span className="v" style={cloud.syncState === 'error' ? { color: 'var(--danger)' } : undefined}>{syncLabel} ・ 今すぐ同期</span>
             </button>
             {cloud.syncError && <div className="err" style={{ padding: '8px 2px' }}>{cloud.syncError}</div>}
             <button
               className="set-row"
-              style={{ color: 'var(--atk)' }}
+              style={{ color: 'var(--danger)' }}
               onClick={() => {
                 const warn = outboxCount > 0 ? `\nまだ送信できていないデータが${outboxCount}件あります。ログアウトすると失われます。` : ''
                 if (confirm(`ログアウトしますか？この端末のデータは消え、次回ログイン時にサーバーから復元されます。${warn}`)) void signOut()

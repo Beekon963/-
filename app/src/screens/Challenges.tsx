@@ -106,7 +106,7 @@ export function Challenges() {
           const no = numbers.get(c.id) ?? 0
           const goal = goalTitle(c.goalId)
           return (
-            <div key={c.id} className="ch-item">
+            <div key={c.id} className={`ch-item res-${c.result}`}>
               <button className="ch-main" onClick={() => setSheet(c)}>
                 <div className="ch-head">
                   <span className="ch-no">#{no}</span>
