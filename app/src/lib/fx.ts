@@ -61,3 +61,13 @@ export function centerOf(el: Element) {
   const r = el.getBoundingClientRect()
   return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
 }
+
+/** 振動（対応端末のみ。iPhone の Web アプリは非対応なので何も起きない） */
+export function buzz(pattern: number | number[]) {
+  if (reduced() || typeof navigator === 'undefined' || !('vibrate' in navigator)) return
+  try {
+    navigator.vibrate(pattern)
+  } catch {
+    /* 失敗しても演出なので無視 */
+  }
+}

@@ -1,11 +1,12 @@
 import { useEffect, useRef } from 'react'
 import { Boot } from './components/Boot'
+import { RoundStart } from './components/RoundStart'
 import { IconBolt, IconChart, IconFlag, IconHome, IconUsers } from './components/Icons'
 import { rankVars } from './lib/color'
 import { Challenges } from './screens/Challenges'
 import { Home } from './screens/Home'
 import { Login } from './screens/Login'
-import { MatchResult, RankChange } from './screens/Overlays'
+import { MatchResult, RankChange, useReady } from './screens/Overlays'
 import { Quests } from './screens/Quests'
 import { RankTable } from './screens/RankTable'
 import { Settings } from './screens/Settings'
@@ -46,6 +47,7 @@ function Game() {
   }, [order])
   const pulled = useData((s) => s.sync.lastPulledAt !== null)
   const { auth } = useCloud()
+  const ready = useReady()
 
   // 初回の取り込みが終わってから開始日を決める（別端末の開始日を上書きしないため）
   useEffect(() => {
@@ -95,6 +97,7 @@ function Game() {
       <RankChange />
       <MatchResult />
       <Boot rankName={g.rank.fullName} color={g.rank.rank.color} />
+      {ready && <RoundStart g={g} />}
     </div>
   )
 }

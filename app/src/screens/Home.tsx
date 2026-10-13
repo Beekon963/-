@@ -6,7 +6,7 @@ import { GoalSelect, MinutesPick, StarsPick, fmtMin } from '../components/forms'
 import { RankHero } from '../components/RankHero'
 import { Sheet } from '../components/Sheet'
 import { daysBetween, formatDot, localDate } from '../lib/date'
-import { burst, centerOf, floatText, pulseClass } from '../lib/fx'
+import { burst, buzz, centerOf, floatText, pulseClass } from '../lib/fx'
 import { MAX_DAILY_QUESTS } from '../lib/defaults'
 import { attackPct, personStatus, startedXp } from '../lib/game'
 import type { ActivityKind, DailyQuest, Stars, WithId } from '../lib/types'
@@ -66,23 +66,25 @@ export function Home() {
       {/* TODAY'S QUESTS */}
       <section className="sec">
         <div className="sec-h">
-          <span className="en">TODAY'S QUESTS</span><span className="ja">今日のクエスト</span>
+          <span className="en">OBJECTIVES</span><span className="ja">今日のクエスト</span>
           <span className="right"><b>{doneCount}</b>/{g.todayQuests.length || MAX_DAILY_QUESTS}</span>
         </div>
-        {g.todayQuests.map((q) => (
+        {g.todayQuests.map((q, i) => (
           <QuestCard
             key={q.id}
             q={q}
+            slot={i}
             goalTitle={g.goals.find((x) => x.id === q.goalId)?.title}
             onToggle={(el) => {
               if (!toggleQuest(q)) return
               const card = el.closest('.quest')
-              const check = el.querySelector('.check')
+              const tile = el.querySelector('.obj-tile')
               const color = g.rank.rank.color
-              if (check) {
-                const c = centerOf(check)
-                burst(c.x, c.y, color)
+              if (tile) {
+                const c = centerOf(tile)
+                burst(c.x, c.y, color, 22, 1.1)
               }
+              buzz(25)
               if (card) {
                 const c = centerOf(card)
                 floatText(c.x + 40, c.y, `+${q.xp}`, color)
@@ -124,10 +126,21 @@ export function Home() {
       <section className="sec">
         <div className="sec-h"><span className="en">ATTACK / DEFENSE</span><span className="ja">攻めと守り</span></div>
         <div className="ratio">
-          <div className="ratio-head">
-            <div className="side a"><div className="lbl">攻め</div><div className="t">{fmtMinHud(s.attackMin)}</div></div>
-            <div className="ratio-mid"><div className="pct">{pct ?? '--'}<small>%</small></div><div className="cap">攻め率</div></div>
-            <div className="side d"><div className="lbl">守り</div><div className="t">{fmtMinHud(s.defenseMin)}</div></div>
+          <div className="score-board">
+            <div className="sb-team atk">
+              <span className="sb-name">ATTACK</span>
+              <span className="sb-ja">攻め</span>
+              <span className="sb-time">{fmtMinHud(s.attackMin)}</span>
+            </div>
+            <div className="sb-center">
+              <div className="sb-pct">{pct ?? '--'}<small>%</small></div>
+              <div className="sb-cap">攻め率</div>
+            </div>
+            <div className="sb-team def">
+              <span className="sb-name">DEFENSE</span>
+              <span className="sb-ja">守り</span>
+              <span className="sb-time">{fmtMinHud(s.defenseMin)}</span>
+            </div>
           </div>
           <div className="rbar">
             <div className="a" style={{ width: `${pct ?? 0}%`, display: pct ? undefined : 'none' }} />
@@ -178,7 +191,7 @@ export function Home() {
         </button>
       </section>
 
-      <SquadAlerts g={g} />
+      <SquadLineup g={g} />
 
       {!g.isRestDay && (
         <div className="rest-row">
@@ -289,8 +302,12 @@ function TopBar({ g }: { g: Game }) {
   )
 }
 
+const OBJ = ['A', 'B', 'C']
+
 interface QuestCardProps {
   q: WithId<DailyQuest>
+  /** 何番目のクエストか（A/B/C） */
+  slot: number
   goalTitle?: string
   startedXp: number
   onToggle: (el: HTMLElement) => void
@@ -298,13 +315,22 @@ interface QuestCardProps {
   onMore: () => void
 }
 
-function QuestCard({ q, goalTitle, startedXp, onToggle, onStart, onMore }: QuestCardProps) {
+/** R6 の目標地点（A/B/C）に見立てたクエスト */
+function QuestCard({ q, slot, goalTitle, startedXp, onToggle, onStart, onMore }: QuestCardProps) {
   const started = !q.done && !!q.started
+  const letter = OBJ[slot] ?? String(slot + 1)
+  const state = q.done ? 'SECURED' : started ? 'ENGAGED' : 'STANDBY'
   return (
-    <div className={`quest${q.done ? ' done' : started ? ' started' : ''}`}>
+    <div className={`quest obj${q.done ? ' done' : started ? ' started' : ''}`} data-obj={letter}>
       <button className="quest-main" onClick={(e) => onToggle(e.currentTarget)} aria-pressed={q.done}>
-        <Check on={q.done} half={started} />
+        <span className="obj-tile" aria-hidden="true">
+          <span className="obj-letter">{letter}</span>
+          {q.done && (
+            <svg className="obj-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#07090d" strokeWidth="4"><polyline points="4 12 10 18 20 6" /></svg>
+          )}
+        </span>
         <span className="q-body">
+          <span className="obj-state">OBJ {letter} ・ {state}</span>
           <span className="q-title">{q.title}</span>
           {goalTitle && <span className="q-link"><i>◆</i>{goalTitle}</span>}
         </span>
@@ -350,24 +376,50 @@ function PromotionPanel({ g }: { g: Game }) {
   )
 }
 
-function SquadAlerts({ g }: { g: Game }) {
-  const alerts = useMemo(() => {
+const HEX = 'M24 2 L45 14 L45 38 L24 50 L3 38 L3 14 Z'
+
+/** R6 の HUD のように仲間を並べる。リングは「連絡の鮮度」（満タン＝連絡したばかり） */
+function SquadLineup({ g }: { g: Game }) {
+  const list = useMemo(() => {
     return g.persons
       .map((p) => {
         const st = personStatus(p, g.contacts.filter((c) => c.personId === p.id), g.today, localDate(p.createdAt))
         return { p, st }
       })
-      .filter(({ st }) => st.overdue || st.actionDue)
       .sort((a, b) => b.st.urgency - a.st.urgency)
-      .slice(0, 3)
   }, [g.persons, g.contacts, g.today])
 
-  if (alerts.length === 0) return null
+  if (list.length === 0) return null
+  const alerts = list.filter(({ st }) => st.overdue || st.actionDue)
+  const open = (id: string) => useUI.setState({ tab: 'squad', focusPerson: id, page: null })
+
   return (
     <section className="sec">
-      <div className="sec-h"><span className="en">SQUAD</span><span className="ja">連絡すべき人</span></div>
-      {alerts.map(({ p, st }) => (
-        <button key={p.id} className="contact" onClick={() => useUI.setState({ tab: 'squad', focusPerson: p.id, page: null })}>
+      <div className="sec-h">
+        <span className="en">SQUAD</span><span className="ja">連絡の鮮度</span>
+        {alerts.length > 0 && <span className="right" style={{ color: 'var(--danger)' }}>{alerts.length}人 要連絡</span>}
+      </div>
+      <div className="lineup">
+        {list.slice(0, 5).map(({ p, st }) => {
+          const fresh = Math.max(0, Math.min(1, 1 - st.daysSince / Math.max(1, p.alertDays)))
+          const tone = st.overdue || st.actionDue ? 'hot' : fresh < 0.35 ? 'warn' : 'ok'
+          return (
+            <button key={p.id} className={`op ${tone}`} onClick={() => open(p.id)}>
+              <span className="op-hex">
+                <svg viewBox="0 0 48 52" aria-hidden="true">
+                  <path d={HEX} className="op-bg" />
+                  <path d={HEX} className="op-ring" pathLength={100} strokeDasharray={`${Math.max(2, fresh * 100)} 100`} />
+                </svg>
+                <span className="op-init">{p.name.slice(0, 1)}</span>
+              </span>
+              <span className="op-name">{p.name}</span>
+              <span className="op-days">{st.actionDue ? '期日' : `${st.daysSince}日`}</span>
+            </button>
+          )
+        })}
+      </div>
+      {alerts.slice(0, 2).map(({ p, st }) => (
+        <button key={p.id} className="contact" onClick={() => open(p.id)}>
           <div className="avatar">{p.name.slice(0, 1)}</div>
           <div className="c-body">
             <div className="c-name">{p.name}<span className="tag">{p.category}</span></div>

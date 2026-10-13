@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Emblem } from '../components/Emblem'
-import { Check, IconBack, IconClose, IconPlus } from '../components/Icons'
+import { Check, IconBack, IconClose, IconLock, IconPlus } from '../components/Icons'
 import { DEFAULT_RANKS } from '../lib/defaults'
 import { sortRanks, tierName } from '../lib/game'
 import type { RankDef } from '../lib/types'
@@ -28,44 +28,63 @@ export function RankTable() {
       {edit ? (
         <RankEditor initial={ranks} onDone={() => useUI.setState({ rankEdit: false })} />
       ) : (
-        <div className="sec">
+        <div className="sec ladder">
           {[...ranks].reverse().map((r) => {
             const i = ranks.indexOf(r)
             const cur = i === g.rank.index
+            const reached = i < g.rank.index
             const locked = i > g.rank.index
             const next = ranks[i + 1]
             const top = r.divisions > 1 ? `${tierName(r, 0)} 〜 ${tierName(r, r.divisions - 1)}` : r.name
+            const inRank = next ? Math.min(1, Math.max(0, (g.total - r.minXp) / (next.minXp - r.minXp))) : 1
             return (
-              <div key={r.id}>
-                <div className={`rank-row${cur ? ' cur' : ''}${locked ? ' locked' : ''}`} style={cur ? undefined : { ['--rank' as string]: r.color }}>
-                  {cur && <span className="you">YOU · {g.rank.fullName}</span>}
-                  <Emblem color={r.color} index={i} total={ranks.length} division={r.divisions - 1} divisions={r.divisions} size={50} />
-                  <div style={{ minWidth: 0 }}>
-                    <div className="nm" style={{ color: r.color }}>{r.name}</div>
-                    <div className="req">{r.minXp.toLocaleString()} XP〜{next ? ` ・ ${top}` : ''}</div>
-                  </div>
+              <div
+                key={r.id}
+                className={`rung${cur ? ' cur' : ''}${reached ? ' reached' : ''}${locked ? ' locked' : ''}${i === 0 ? ' rung-bottom' : ''}${!next ? ' rung-top' : ''}`}
+                style={{ ['--rc' as string]: r.color }}
+              >
+                <div className="rung-rail">
+                  <span className="rung-node">
+                    <Emblem
+                      color={r.color} index={i} total={ranks.length} division={cur ? g.rank.division : r.divisions - 1}
+                      divisions={r.divisions} size={cur ? 64 : 54} animated={cur}
+                    />
+                    {locked && <span className="rung-lock"><IconLock size={14} /></span>}
+                  </span>
                 </div>
-                {r.conditions.length > 0 && (
-                  <div className="rank-conds">
-                    <div className="label" style={{ marginBottom: 0, marginTop: 6 }}>昇格条件</div>
-                    {r.conditions.map((c) => (
-                      <button
-                        key={c.id}
-                        className={`cond${c.cleared ? ' done' : ''}`}
-                        onClick={() => {
-                          if (c.cleared) {
-                            if (confirm('クリアを取り消しますか？')) setConditionCleared(r.id, c.id, false)
-                          } else if (confirm(`「${c.text}」\n本当にクリアした？`)) {
-                            setConditionCleared(r.id, c.id, true)
-                          }
-                        }}
-                      >
-                        <Check on={c.cleared} />
-                        <span>{c.text}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <div className="rung-card">
+                  {cur && <span className="you">YOU ARE HERE</span>}
+                  <div className="nm" style={{ color: r.color }}>{cur ? g.rank.fullName : r.name}</div>
+                  <div className="req">{r.minXp.toLocaleString()} XP〜{next ? ` ・ ${top}` : ''}</div>
+                  {cur && next && (
+                    <div className="rung-progress">
+                      <div className="pbar"><div style={{ width: `${inRank * 100}%` }} /></div>
+                      <span>{next.name} まで {Math.max(0, next.minXp - g.total).toLocaleString()} XP</span>
+                    </div>
+                  )}
+                  {locked && <div className="rung-left">あと {(r.minXp - g.total).toLocaleString()} XP</div>}
+                  {r.conditions.length > 0 && (
+                    <div className="rung-conds">
+                      <div className="label">昇格条件</div>
+                      {r.conditions.map((c) => (
+                        <button
+                          key={c.id}
+                          className={`cond${c.cleared ? ' done' : ''}`}
+                          onClick={() => {
+                            if (c.cleared) {
+                              if (confirm('クリアを取り消しますか？')) setConditionCleared(r.id, c.id, false)
+                            } else if (confirm(`「${c.text}」\n本当にクリアした？`)) {
+                              setConditionCleared(r.id, c.id, true)
+                            }
+                          }}
+                        >
+                          <Check on={c.cleared} />
+                          <span>{c.text}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )
           })}

@@ -147,17 +147,6 @@ input, textarea, select { font:inherit; font-size:16px; color:var(--text); }
 
 /* ===== ratio ===== */
 .ratio { background:var(--panel); border:1px solid var(--line); padding:14px 14px 12px; }
-.ratio-head { display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:10px; }
-.side .lbl { font-size:11px; font-weight:700; display:flex; align-items:center; gap:5px; }
-.side .lbl::before { content:''; width:7px; height:7px; transform:rotate(45deg); }
-.side.a .lbl { color:var(--atk); } .side.a .lbl::before { background:var(--atk); }
-.side.d { text-align:right; } .side.d .lbl { color:#8fb2d6; justify-content:flex-end; } .side.d .lbl::before { background:var(--def); }
-.side .t { font-family:var(--hud); font-weight:700; font-size:20px; line-height:1.1; margin-top:2px; }
-.side .t small { font-size:12px; color:var(--sub); }
-.ratio-mid { text-align:center; }
-.ratio-mid .pct { font-family:var(--hud); font-weight:700; font-size:34px; line-height:.9; color:var(--atk); }
-.ratio-mid .pct small { font-size:16px; }
-.ratio-mid .cap { font-size:10px; color:var(--sub); letter-spacing:.1em; margin-top:2px; }
 .rbar { height:8px; display:flex; gap:2px; position:relative; }
 .rbar .a { background:var(--atk); box-shadow:0 0 10px var(--atk-glow); transition:width .6s; }
 .rbar .d { flex:1; background:var(--def); opacity:.55; }
@@ -748,3 +737,161 @@ body {
 .ch-no { font-size:22px !important; line-height:1; letter-spacing:.01em; }
 .ch-item.res-fail .ch-no { color:var(--danger); }
 .ch-item.res-ongoing .ch-no { color:#8fb2d6; }
+
+/* ===================================================================
+   OBJECTIVES（デイリー＝R6 の目標地点 A/B/C）
+   =================================================================== */
+.quest.obj { padding:10px 6px 10px 10px; border-left-width:3px; }
+.quest.obj::before { content:attr(data-obj); position:absolute; right:58px; top:50%; transform:translateY(-50%) skewX(-8deg);
+  font-family:var(--display); font-weight:800; font-size:92px; line-height:1; color:#fff; opacity:.035; pointer-events:none; }
+.obj-tile { position:relative; width:42px; height:46px; flex-shrink:0; display:grid; place-items:center;
+  clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%); background:var(--panel3); transition:background .3s; }
+.obj-tile::before { content:''; position:absolute; inset:1px; clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%); background:var(--bg); transition:background .3s; }
+.obj-letter { position:relative; font-family:var(--display); font-weight:800; font-size:26px; line-height:1; color:var(--sub); transition:color .3s; }
+.obj-check { position:absolute; right:5px; bottom:4px; }
+.obj-state { display:block; font-family:var(--hud); font-weight:700; font-size:10px; letter-spacing:.16em; color:var(--mute); margin-bottom:1px; }
+.quest.obj.started { border-left-color:var(--atk); }
+.quest.obj.started .obj-tile { background:var(--atk); }
+.quest.obj.started .obj-tile::before { background:linear-gradient(135deg, var(--atk-dim) 0 50%, var(--bg) 50%); }
+.quest.obj.started .obj-letter { color:var(--atk); }
+.quest.obj.started .obj-state { color:var(--atk); }
+.quest.obj.done .obj-tile { background:var(--rank); box-shadow:0 0 14px var(--rank-glow); }
+.quest.obj.done .obj-tile::before { background:var(--rank); }
+.quest.obj.done .obj-letter { color:#07090d; }
+.quest.obj.done .obj-state { color:var(--rank); }
+.quest.obj.done::before { color:var(--rank); opacity:.08; }
+.quest.obj.sweep .obj-tile { animation:tileHit .5s cubic-bezier(.2,1.6,.4,1); }
+@keyframes tileHit { 0% { transform:scale(.6); } 100% { transform:scale(1); } }
+
+/* ===================================================================
+   SCOREBOARD（攻め＝ATTACK / 守り＝DEFENSE）
+   =================================================================== */
+.score-board { display:grid; grid-template-columns:1fr auto 1fr; align-items:stretch; margin-bottom:12px; }
+.sb-team { display:flex; flex-direction:column; padding:8px 12px 7px; min-width:0; }
+.sb-team.atk { background:linear-gradient(90deg, rgba(255,140,26,.28), rgba(255,140,26,.08)); border-left:3px solid var(--atk);
+  clip-path:polygon(0 0,100% 0,calc(100% - 12px) 100%,0 100%); }
+.sb-team.def { background:linear-gradient(270deg, rgba(74,111,150,.42), rgba(74,111,150,.1)); border-right:3px solid #6d93bb; text-align:right; align-items:flex-end;
+  clip-path:polygon(0 0,100% 0,100% 100%,12px 100%); }
+.sb-name { font-family:var(--hud); font-weight:800; font-size:12px; letter-spacing:.14em; }
+.sb-team.atk .sb-name { color:var(--atk); }
+.sb-team.def .sb-name { color:#8fb2d6; }
+.sb-ja { font-size:10px; color:var(--sub); margin-top:-1px; }
+.sb-time { font-family:var(--hud); font-weight:800; font-size:24px; line-height:1.05; margin-top:2px; }
+.sb-time small { font-size:12px; color:var(--sub); font-weight:600; }
+.sb-center { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 10px; min-width:84px; position:relative; }
+.sb-center::before { content:''; position:absolute; width:58px; height:58px; transform:rotate(45deg); border:1px solid var(--line3); background:rgba(255,255,255,.03); }
+.sb-pct { position:relative; font-family:var(--hud); font-weight:800; font-size:30px; line-height:.95; color:#fff; }
+.sb-pct small { font-size:14px; }
+.sb-cap { position:relative; font-size:9px; color:var(--sub); letter-spacing:.1em; }
+.rbar .d { background:var(--def); opacity:.8; }
+
+/* ===================================================================
+   SQUAD LINEUP（HUD 上部のチーム表示風）
+   =================================================================== */
+.lineup { display:grid; grid-template-columns:repeat(5, 1fr); gap:4px; margin-bottom:10px; }
+.op { display:flex; flex-direction:column; align-items:center; gap:3px; padding:4px 0; min-width:0; }
+.op-hex { position:relative; width:52px; height:56px; display:grid; place-items:center; }
+.op-hex svg { position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
+.op-bg { fill:var(--panel2); stroke:var(--line2); stroke-width:3; }
+.op-ring { fill:none; stroke-width:3; stroke-linejoin:round; transition:stroke-dasharray .8s ease; }
+.op.ok .op-ring { stroke:#35e0a1; filter:drop-shadow(0 0 4px rgba(53,224,161,.5)); }
+.op.warn .op-ring { stroke:var(--atk); filter:drop-shadow(0 0 4px var(--atk-glow)); }
+.op.hot .op-ring { stroke:var(--danger); }
+.op.hot .op-hex { animation:opPulse 1.6s ease-in-out infinite; }
+@keyframes opPulse { 50% { filter:drop-shadow(0 0 8px rgba(255,70,85,.6)); } }
+.op-init { position:relative; font-weight:900; font-size:17px; }
+.op-name { font-size:10px; font-weight:700; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.op-days { font-family:var(--hud); font-weight:700; font-size:11px; color:var(--sub); line-height:1; }
+.op.hot .op-days { color:var(--danger); }
+
+/* ===== ROUND START ===== */
+.round-start { position:fixed; inset:0; z-index:95; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  background:rgba(4,5,7,.6); animation:fadeIn .2s ease; transition:opacity .35s ease; --band:var(--atk); }
+.round-start.rest { --band:#45d6c4; }
+.round-start.out { opacity:0; pointer-events:none; }
+.rs-band { position:relative; width:100%; padding:12px 0 10px; text-align:center; }
+.rs-band::before { content:''; position:absolute; inset:0;
+  background:linear-gradient(90deg, transparent, color-mix(in srgb, var(--band) 92%, transparent) 12%, color-mix(in srgb, var(--band) 92%, transparent) 88%, transparent);
+  box-shadow:0 0 40px color-mix(in srgb, var(--band) 40%, transparent);
+  transform:skewX(-12deg) scaleX(0); animation:bandIn .4s cubic-bezier(.7,0,.2,1) forwards; }
+.rs-round { position:relative; font-family:var(--hud); font-weight:800; font-size:14px; letter-spacing:.45em; color:#160c02; opacity:0; animation:fadeUp .3s ease .25s forwards; }
+.rs-phase { position:relative; font-family:var(--display); font-weight:800; font-size:58px; line-height:1; letter-spacing:.03em; color:#160c02; opacity:0;
+  animation:verdictIn .4s cubic-bezier(.2,.9,.2,1) .3s forwards; }
+.rs-prev { display:flex; align-items:baseline; gap:10px; margin-top:16px; font-family:var(--hud); font-weight:700; font-size:12px; letter-spacing:.2em; color:var(--sub);
+  opacity:0; animation:fadeUp .3s ease .55s forwards; }
+.rs-prev b { font-size:20px; letter-spacing:.04em; }
+.rs-prev b.win { color:var(--rank); }
+.rs-prev b.lose { color:var(--danger); }
+.rs-prev .xp { color:#fff; font-size:16px; letter-spacing:.04em; }
+.rs-goal { margin-top:8px; font-size:12px; color:var(--sub); opacity:0; animation:fadeUp .3s ease .75s forwards; }
+.rs-goal b { font-family:var(--hud); font-size:18px; color:var(--atk); margin:0 2px; }
+
+/* ===== emblem 3D tilt ===== */
+.tilt { position:relative; z-index:1; width:150px; margin:8px auto 0; transform-style:preserve-3d;
+  transform:perspective(700px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition:transform .6s cubic-bezier(.2,.8,.2,1); }
+.tilt:not(.active) { animation:sway 8s ease-in-out infinite; }
+.tilt.active { transition:transform .08s linear; }
+.tilt .emblem { margin:0; }
+.tilt::after { content:''; position:absolute; inset:14% 18%; pointer-events:none; opacity:0; transition:opacity .3s;
+  background:radial-gradient(circle at var(--gx, 50%) var(--gy, 40%), rgba(255,255,255,.45), transparent 42%);
+  mix-blend-mode:overlay; filter:blur(2px); }
+.tilt.active::after { opacity:1; }
+@keyframes sway {
+  0%, 100% { transform:perspective(700px) rotateY(-9deg) rotateX(2deg); }
+  50% { transform:perspective(700px) rotateY(9deg) rotateX(-2deg); }
+}
+
+/* ===================================================================
+   RANK LADDER（ランク表をはしご状の進行トラックに）
+   =================================================================== */
+.ladder { padding-top:4px; }
+.rung { display:grid; grid-template-columns:70px 1fr; gap:10px; }
+.rung-rail { position:relative; display:flex; justify-content:center; }
+.rung-rail::before, .rung-rail::after { content:''; position:absolute; left:50%; width:2px; transform:translateX(-50%);
+  background:repeating-linear-gradient(180deg, rgba(255,255,255,.14) 0 4px, transparent 4px 8px); }
+.rung-rail::before { top:0; height:34px; }
+.rung-rail::after { top:34px; bottom:0; }
+.rung.rung-top .rung-rail::before, .rung.rung-bottom .rung-rail::after { display:none; }
+/* 到達済みの区間だけ光らせる（下から現在地まで） */
+.rung.reached .rung-rail::before, .rung.reached .rung-rail::after, .rung.cur .rung-rail::after {
+  background:var(--rank); box-shadow:0 0 10px var(--rank-glow); }
+.rung-node { position:relative; z-index:1; margin-top:6px; height:fit-content; border-radius:50%;
+  background:radial-gradient(circle, var(--bg) 55%, transparent 72%); }
+.rung.locked .rung-node svg { filter:grayscale(.85) brightness(.55); }
+.rung.cur .rung-node { margin-top:0; filter:drop-shadow(0 0 14px var(--rank-glow)); }
+.rung.cur .rung-node::after { content:''; position:absolute; inset:-6px; border:1px solid var(--rank); border-radius:50%; opacity:.6; animation:nodePulse 1.8s ease-out infinite; }
+@keyframes nodePulse { from { transform:scale(.85); opacity:.7; } to { transform:scale(1.25); opacity:0; } }
+.rung-lock { position:absolute; right:2px; bottom:2px; width:22px; height:22px; display:grid; place-items:center; color:var(--sub);
+  background:var(--panel2); border:1px solid var(--line2); clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%); }
+.rung-card { position:relative; margin:4px 0 12px; padding:10px 12px; background:var(--panel); border:1px solid var(--line); }
+.rung.locked .rung-card { background:rgba(14,18,24,.55); }
+.rung.locked .rung-card .nm { opacity:.6; }
+.rung.cur .rung-card { border-color:var(--rank); box-shadow:0 0 22px var(--rank-glow) inset; }
+.rung-card .nm { font-family:var(--display); font-weight:800; font-size:26px; letter-spacing:.03em; line-height:1; }
+.rung-card .req { font-family:var(--hud); font-weight:700; font-size:12px; color:var(--sub); margin-top:3px; }
+.rung-card .you { position:absolute; top:-1px; right:-1px; font-family:var(--hud); font-weight:800; font-size:10px; letter-spacing:.16em;
+  background:var(--rank); color:var(--bg); padding:2px 8px; }
+.rung-progress { display:flex; align-items:center; gap:8px; margin-top:8px; }
+.rung-progress .pbar { flex:1; }
+.rung-progress span { font-family:var(--hud); font-weight:700; font-size:12px; color:var(--rank); white-space:nowrap; }
+.rung-left { font-family:var(--hud); font-weight:700; font-size:12px; color:var(--mute); margin-top:4px; letter-spacing:.04em; }
+.rung-conds { margin-top:8px; border-top:1px solid var(--line); }
+.rung-conds .label { margin:6px 0 0; }
+.rung-conds .cond { border-top:none; padding:6px 0; font-size:12px; }
+
+/* MVP（その日いちばんの行動） */
+.mr-mvp { display:flex; align-items:center; gap:10px; padding:10px 12px; margin-bottom:12px; text-align:left;
+  background:linear-gradient(90deg, color-mix(in srgb, var(--cut) 22%, transparent), transparent); border-left:3px solid var(--cut);
+  opacity:0; animation:fadeUp .4s ease .95s forwards; }
+.mvp-tag { font-family:var(--hud); font-weight:800; font-size:12px; letter-spacing:.16em; color:#08090c; background:var(--cut); padding:2px 8px;
+  clip-path:polygon(6px 0,100% 0,calc(100% - 6px) 100%,0 100%); }
+.mvp-label { flex:1; min-width:0; font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mr-mvp b { font-family:var(--hud); font-weight:800; font-size:20px; color:var(--cut); }
+
+/* ===== sheet header（R6 のメニュー風） ===== */
+.sheet { border-top:2px solid var(--rank); box-shadow:0 -12px 40px rgba(0,0,0,.55), 0 -1px 20px var(--rank-glow);
+  background:linear-gradient(180deg, #121821, var(--panel) 120px); }
+.sheet-h { position:relative; padding-bottom:10px; border-bottom:1px solid var(--line); }
+.sheet-h::after { content:''; position:absolute; left:0; bottom:-1px; width:56px; height:2px; background:var(--rank); box-shadow:0 0 8px var(--rank-glow); }
+.sheet-h .en::before { content:'// '; color:var(--atk); }
+.sheet-h .en { font-weight:800; font-size:17px; letter-spacing:.1em; }

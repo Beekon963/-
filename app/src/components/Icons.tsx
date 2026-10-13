@@ -41,6 +41,7 @@ export const IconFlame = ({ size = 14 }: { size?: number }) => (
     <path d="M12 2c1 3.5-1.5 5.5-1.5 8 0 1.4 1 2.5 2.3 2.5 1.7 0 2.7-1.5 2.2-3.8C17.7 10.6 19 13 19 15.5 19 19.6 15.9 22 12 22s-7-2.4-7-6.5C5 10 10.5 7.5 12 2z" />
   </svg>
 )
+export const IconLock = (p: P) => <svg {...base(p)}><rect x="5" y="11" width="14" height="10" rx="1" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
 export const IconAlert = (p: P) => <svg {...base(p)}><path d="M12 3l10 18H2L12 3zM12 10v5M12 18v.5" /></svg>
 
 export function Check({ on, half }: { on: boolean; half?: boolean }) {
