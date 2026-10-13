@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { addDays, logicalToday, weekStart } from './date'
 import { DEFAULT_CONFIG, DEFAULT_RANKS } from './defaults'
 import {
-  activityXp, buildLedger, challengesByDate, computeRank, goalProgress, childrenMap, personStatus, summarize, weeklyStats,
+  activityXp, buildLedger, challengesByDate, computeRank, peakRank, winRate, goalProgress, childrenMap, personStatus, summarize, weeklyStats,
   type GameData,
 } from './game'
 import type { DailyQuest, Goal, RankDef, WithId } from './types'
@@ -220,5 +220,30 @@ describe('challenge log', () => {
     expect(entries.filter((e) => e.kind === 'challenge').length).toBe(2)
     expect(entries.filter((e) => e.kind === 'post').map((e) => [e.date, e.amount])).toEqual([['2026-10-04', 30]])
     expect(summarize(entries).total).toBe(70)
+  })
+})
+
+describe('career', () => {
+  it('tracks the best streak even after it breaks', () => {
+    const quests = ['2026-10-01', '2026-10-02', '2026-10-03', '2026-10-05'].map((d) => quest(d, true))
+    const { streak, bestStreak } = buildLedger(game({ today: '2026-10-06', quests }))
+    expect(bestStreak).toBe(3)
+    expect(streak).toBe(1)
+  })
+
+  it('remembers the peak rank after a demotion', () => {
+    const ranks = DEFAULT_RANKS.map((r) => ({ ...r, conditions: [] }))
+    const entries = [
+      { date: '2026-10-01', amount: 1600, kind: 'quest' as const, label: '' },
+      { date: '2026-10-02', amount: -300, kind: 'penalty' as const, label: '' },
+    ]
+    expect(computeRank(summarize(entries).total, ranks).fullName).toBe('BRONZE I')
+    expect(peakRank(entries, ranks).fullName).toBe('SILVER III')
+  })
+
+  it('computes win rate over past non-rest days', () => {
+    const quests = [quest('2026-10-01', true), quest('2026-10-02', false), quest('2026-10-04', true)]
+    expect(winRate(quests, new Set(['2026-10-03']), '2026-10-01', '2026-10-05')).toBe(67)
+    expect(winRate([], new Set(), '2026-10-05', '2026-10-05')).toBeNull()
   })
 })

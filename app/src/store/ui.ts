@@ -7,6 +7,9 @@ export interface Toast {
   id: number
   amount: number
   label: string
+  detail?: string
+  /** atk = 攻め系の行動（オレンジ） */
+  tone?: 'atk'
 }
 
 interface UIState {
@@ -40,8 +43,9 @@ export function openPage(page: Page, opts: { rankEdit?: boolean } = {}) {
 
 let seq = 0
 
-export function toast(amount: number, label: string) {
+/** キルフィード風の XP 通知 */
+export function toast(amount: number, label: string, detail?: string, tone?: 'atk') {
   const id = ++seq
-  useUI.setState((s) => ({ toasts: [...s.toasts.slice(-2), { id, amount, label }] }))
-  setTimeout(() => useUI.setState((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), 1800)
+  useUI.setState((s) => ({ toasts: [...s.toasts.slice(-3), { id, amount, label, detail, tone }] }))
+  setTimeout(() => useUI.setState((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), 3200)
 }

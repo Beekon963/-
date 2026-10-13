@@ -1,4 +1,5 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
+import { Boot } from './components/Boot'
 import { IconBolt, IconChart, IconFlag, IconHome, IconUsers } from './components/Icons'
 import { rankVars } from './lib/color'
 import { Challenges } from './screens/Challenges'
@@ -36,6 +37,13 @@ const TABS: { id: Tab; label: string; Icon: typeof IconHome }[] = [
 function Game() {
   const g = useGame()
   const { tab, page, toasts } = useUI()
+  // タブの並び順で、左右どちらから入ってくるかを決める
+  const order = TABS.findIndex((t) => t.id === tab)
+  const lastOrder = useRef(order)
+  const dir = order >= lastOrder.current ? 'r' : 'l'
+  useEffect(() => {
+    lastOrder.current = order
+  }, [order])
   const pulled = useData((s) => s.sync.lastPulledAt !== null)
   const { auth } = useCloud()
 
@@ -51,14 +59,18 @@ function Game() {
 
   return (
     <div className="app">
-      {page === 'ranks' ? <RankTable /> : page === 'settings' ? <Settings /> : page === 'vision' ? <Vision /> : (
-        <>
+      {page ? (
+        <div key={page} className="tab-anim page">
+          {page === 'ranks' ? <RankTable /> : page === 'settings' ? <Settings /> : <Vision />}
+        </div>
+      ) : (
+        <div key={tab} className={`tab-anim ${dir}`}>
           {tab === 'home' && <Home />}
           {tab === 'quests' && <Quests />}
           {tab === 'challenge' && <Challenges />}
           {tab === 'squad' && <Squad />}
           {tab === 'stats' && <Stats />}
-        </>
+        </div>
       )}
 
       <nav className="nav">
@@ -70,17 +82,19 @@ function Game() {
         ))}
       </nav>
 
-      <div className="toasts" aria-live="polite">
+      <div className="feed" aria-live="polite">
         {toasts.map((t) => (
-          <div key={t.id} className={`toast${t.amount < 0 ? ' neg' : ''}`}>
-            <span className="a">{t.amount >= 0 ? '+' : ''}{t.amount} XP</span>
-            <span className="l">{t.label}</span>
+          <div key={t.id} className={`feed-row${t.amount < 0 ? ' neg' : t.tone === 'atk' ? ' atk' : ''}`}>
+            <span className="tag">{t.label}</span>
+            {t.detail && <span className="d">{t.detail}</span>}
+            <span className="a">{t.amount >= 0 ? '+' : ''}{t.amount}</span>
           </div>
         ))}
       </div>
 
       <RankChange />
       <MatchResult />
+      <Boot rankName={g.rank.fullName} color={g.rank.rank.color} />
     </div>
   )
 }

@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ChallengeSheet } from '../components/ChallengeSheet'
+import { CountUp } from '../components/CountUp'
 import { Check, IconAlert, IconBolt, IconChevron, IconClose, IconFlame, IconGear, IconMore, IconPlus } from '../components/Icons'
 import { GoalSelect, MinutesPick, StarsPick, fmtMin } from '../components/forms'
 import { RankHero } from '../components/RankHero'
 import { Sheet } from '../components/Sheet'
-import { formatDot, localDate } from '../lib/date'
+import { daysBetween, formatDot, localDate } from '../lib/date'
+import { burst, centerOf, floatText, pulseClass } from '../lib/fx'
 import { MAX_DAILY_QUESTS } from '../lib/defaults'
 import { attackPct, personStatus, startedXp } from '../lib/game'
 import type { ActivityKind, DailyQuest, Stars, WithId } from '../lib/types'
@@ -48,7 +50,7 @@ export function Home() {
 
       <div className="strip">
         <div className={`stat xp${net < 0 ? ' neg' : ''}`}>
-          <div className="v">{net >= 0 ? '+' : ''}{net}</div>
+          <div className="v"><CountUp value={net} signed /></div>
           <div className="l">今日の獲得XP</div>
         </div>
         <div className="stat">
@@ -72,11 +74,31 @@ export function Home() {
             key={q.id}
             q={q}
             goalTitle={g.goals.find((x) => x.id === q.goalId)?.title}
-            onToggle={() => {
-              if (toggleQuest(q)) setTimeFor(q)
+            onToggle={(el) => {
+              if (!toggleQuest(q)) return
+              const card = el.closest('.quest')
+              const check = el.querySelector('.check')
+              const color = g.rank.rank.color
+              if (check) {
+                const c = centerOf(check)
+                burst(c.x, c.y, color)
+              }
+              if (card) {
+                const c = centerOf(card)
+                floatText(c.x + 40, c.y, `+${q.xp}`, color)
+              }
+              pulseClass(card, 'sweep', 700)
+              setTimeout(() => setTimeFor(q), 420)
             }}
             onMore={() => setQuestSheet({ quest: q })}
-            onStart={() => toggleStarted(q)}
+            onStart={(el) => {
+              if (!q.started) {
+                const c = centerOf(el)
+                burst(c.x, c.y, '#ff8c1a', 10, 0.6)
+                floatText(c.x, c.y - 10, `+${startedXp(q, g.config.rules)}`, '#ff8c1a')
+              }
+              toggleStarted(q)
+            }}
             startedXp={startedXp(q, g.config.rules)}
           />
         ))}
@@ -207,13 +229,37 @@ function MissionStrip({ g, onChallenge }: { g: Game; onChallenge: () => void }) 
       <button className="body" onClick={() => openPage('vision')}>
         <div className="m">{g.vision?.mission || '人生の目標を書いて、毎日の行動とつなげよう'}</div>
         <div className="c">
-          今日の挑戦<b>{c.today}</b>回 ・ 昨日 {c.yesterday}回
+          今日の挑戦<b><CountUp value={c.today} /></b>回 ・ 昨日 {c.yesterday}回
           {diff > 0 ? <span className="up"> ・ 昨日超え</span> : c.today > 0 && diff === 0 ? ' ・ 昨日に並んだ' : ` ・ 通算 ${c.total}回`}
         </div>
       </button>
       <button className="ms-add" onClick={onChallenge} aria-label="挑戦を記録">
         <IconBolt size={16} />挑戦
       </button>
+    </div>
+  )
+}
+
+/** 1日をラウンドに見立てる。日付が変わる（＝判定される）までの残り時間 */
+function RoundTimer({ g }: { g: Game }) {
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(id)
+  }, [])
+  const end = new Date(now)
+  end.setHours(g.config.dayStartHour, 0, 0, 0)
+  if (end <= now) end.setDate(end.getDate() + 1)
+  const left = Math.max(0, Math.floor((end.getTime() - now.getTime()) / 1000))
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const time = `${pad(Math.floor(left / 3600))}:${pad(Math.floor((left % 3600) / 60))}:${pad(left % 60)}`
+  const atRisk = !g.isRestDay && (g.todayQuests.length === 0 || g.todayQuests.some((q) => !q.done && !q.started))
+  const hot = atRisk && left < 3600
+  const round = daysBetween(g.startDate, g.today) + 1
+  return (
+    <div className={`round${hot ? ' hot' : ''}${g.isRestDay ? ' rest' : ''}`} aria-label={`日付が変わるまで ${time}`}>
+      <div className="r-label">{g.isRestDay ? 'REST DAY' : hot ? 'LAST HOUR' : `ROUND ${round}`}</div>
+      <div className="r-time">{time}</div>
     </div>
   )
 }
@@ -227,10 +273,11 @@ function TopBar({ g }: { g: Game }) {
         <div className="logo">LIFE <b>RANKED</b></div>
         <div className="date">{formatDot(g.today)}</div>
       </div>
+      <RoundTimer g={g} />
       <div className="top-r">
         {g.streak > 0 && (
           <div className="streak" title="連続達成">
-            <IconFlame /><span>{g.streak}</span><small>日連続</small>
+            <IconFlame /><span>{g.streak}</span><small>日</small>
           </div>
         )}
         <button className="icon-btn" style={{ position: 'relative' }} aria-label="設定" onClick={() => openPage('settings')}>
@@ -246,8 +293,8 @@ interface QuestCardProps {
   q: WithId<DailyQuest>
   goalTitle?: string
   startedXp: number
-  onToggle: () => void
-  onStart: () => void
+  onToggle: (el: HTMLElement) => void
+  onStart: (el: HTMLElement) => void
   onMore: () => void
 }
 
@@ -255,7 +302,7 @@ function QuestCard({ q, goalTitle, startedXp, onToggle, onStart, onMore }: Quest
   const started = !q.done && !!q.started
   return (
     <div className={`quest${q.done ? ' done' : started ? ' started' : ''}`}>
-      <button className="quest-main" onClick={onToggle} aria-pressed={q.done}>
+      <button className="quest-main" onClick={(e) => onToggle(e.currentTarget)} aria-pressed={q.done}>
         <Check on={q.done} half={started} />
         <span className="q-body">
           <span className="q-title">{q.title}</span>
@@ -267,7 +314,7 @@ function QuestCard({ q, goalTitle, startedXp, onToggle, onStart, onMore }: Quest
         </span>
       </button>
       {!q.done && (
-        <button className={`q-start${started ? ' on' : ''}`} onClick={onStart} aria-pressed={started}>
+        <button className={`q-start${started ? ' on' : ''}`} onClick={(e) => onStart(e.currentTarget)} aria-pressed={started}>
           {started ? '着手済' : '着手'}
         </button>
       )}

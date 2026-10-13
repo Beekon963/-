@@ -97,6 +97,7 @@ export function buildLedger(g: GameData) {
   }
 
   let streak = 0
+  let bestStreak = 0
   for (let d = g.startDate; d <= g.today; d = addDays(d, 1)) {
     const qs = questsByDate.get(d) ?? []
     const active = qs.some((q) => !untouched(q))
@@ -105,6 +106,7 @@ export function buildLedger(g: GameData) {
 
     if (active) {
       streak++
+      bestStreak = Math.max(bestStreak, streak)
       if (rules.streakEvery > 0 && streak % rules.streakEvery === 0) {
         entries.push({ date: d, amount: rules.streakBonus, kind: 'streak', label: `${streak}日連続ボーナス` })
       }
@@ -126,7 +128,7 @@ export function buildLedger(g: GameData) {
     }
   }
 
-  return { entries, streak }
+  return { entries, streak, bestStreak }
 }
 
 export interface DayXp {
@@ -238,6 +240,28 @@ export function computeRank(total: number, rankDefs: RankDef[]): RankState {
     next: { name: nextName, xpNeeded: Math.ceil(divStart + divSize - total) },
     promotion: null, upcoming, tierKey: index * 10 + division,
   }
+}
+
+/** 過去いちばん高かったランク（日ごとの残高で判定。昇格条件は今の状態で見る） */
+export function peakRank(entries: XpEntry[], ranks: RankDef[]) {
+  const { daily } = summarize(entries)
+  let balance = 0
+  let best = computeRank(0, ranks)
+  for (const date of [...daily.keys()].sort()) {
+    const d = daily.get(date)!
+    balance = Math.max(0, balance + d.gain + d.loss)
+    const state = computeRank(balance, ranks)
+    if (state.tierKey > best.tierKey) best = state
+  }
+  return best
+}
+
+/** 勝率：過去の日（休息日を除く）のうち、デイリーを1つ以上達成した日の割合 */
+export function winRate(quests: DailyQuest[], rests: Set<string>, startDate: string, today: string) {
+  const won = new Set(quests.filter((q) => q.done && q.date < today && q.date >= startDate).map((q) => q.date))
+  let days = 0
+  for (let d = startDate; d < today; d = addDays(d, 1)) if (!rests.has(d)) days++
+  return days > 0 ? Math.round((won.size / days) * 100) : null
 }
 
 // ---------- 集計 ----------

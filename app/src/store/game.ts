@@ -1,9 +1,9 @@
 // レコードからゲーム状態を組み立てる＋画面から呼ぶ操作
 
 import { useEffect, useMemo, useState } from 'react'
-import { logicalToday, weekStart, addDays } from '../lib/date'
+import { addDays, daysBetween, logicalToday, weekStart } from '../lib/date'
 import { DEFAULT_CONFIG, MAX_DAILY_QUESTS } from '../lib/defaults'
-import { activityXp, buildLedger, challengesByDate, computeRank, dayStat, startedXp, summarize, untouched } from '../lib/game'
+import { activityXp, buildLedger, challengesByDate, computeRank, dayStat, peakRank, startedXp, summarize, untouched, winRate } from '../lib/game'
 import type {
   Activity, ActivityKind, Challenge, ChallengeResult, Config, Contact, ContactMethod, DailyQuest, Goal, GoalLevel, Person, Rec, RecordMap,
   PostStatus, RecType, Review, Stars, Vision, WithId,
@@ -45,7 +45,7 @@ export function deriveGame(records: Record<string, Rec>, now: Date) {
   const rests = new Set(lists.rest.map((r) => r.date))
   const byCreated = <T extends { createdAt: number }>(a: T, b: T) => a.createdAt - b.createdAt
 
-  const { entries, streak } = buildLedger({
+  const { entries, streak, bestStreak } = buildLedger({
     config, startDate, today, rests,
     quests: lists.quest, activities: lists.activity, goals: lists.goal, contacts: lists.contact, reviews: lists.review,
     challenges: lists.challenge,
@@ -65,6 +65,14 @@ export function deriveGame(records: Record<string, Rec>, now: Date) {
   return {
     config,
     vision,
+    career: {
+      bestStreak,
+      winRate: winRate(lists.quest, rests, startDate, today),
+      peak: peakRank(entries, config.ranks),
+      days: daysBetween(startDate, today) + 1,
+      attackMin: lists.activity.reduce((m, a) => m + (a.kind === 'attack' ? a.minutes : 0), 0),
+      posts: lists.challenge.filter((c) => c.post === 'posted').length,
+    },
     challenges: {
       total: challengeTotal,
       today: challengeMap.get(today) ?? 0,
@@ -172,13 +180,13 @@ export function toggleQuest(q: WithId<DailyQuest>) {
     patch('quest', q.id, { done: false })
     const linked = g.activities.filter((a) => a.questId === q.id).map((a) => a.id)
     if (linked.length) remove(...linked)
-    toast(-q.xp, 'クエスト取り消し')
+    toast(-q.xp, 'UNDO', q.title)
     return false
   }
   patch('quest', q.id, { done: true, started: false })
   const willBePerfect = g.todayQuests.length >= MAX_DAILY_QUESTS && g.todayQuests.every((x) => x.done || x.id === q.id)
-  toast(q.xp, 'QUEST CLEAR')
-  if (willBePerfect) setTimeout(() => toast(g.config.rules.perfectBonus, 'PERFECT'), 450)
+  toast(q.xp, 'QUEST CLEAR', q.title)
+  if (willBePerfect) setTimeout(() => toast(g.config.rules.perfectBonus, 'PERFECT', '3つ全クリア'), 450)
   return true
 }
 
@@ -187,7 +195,7 @@ export function toggleStarted(q: WithId<DailyQuest>) {
   if (q.done) return
   const rules = current().config.rules
   patch('quest', q.id, { started: !q.started })
-  toast(q.started ? -startedXp(q, rules) : startedXp(q, rules), q.started ? '着手を取り消し' : '着手')
+  toast(q.started ? -startedXp(q, rules) : startedXp(q, rules), q.started ? 'UNDO' : 'ENGAGED', q.title, 'atk')
 }
 
 export function untouchedToday() {
@@ -204,7 +212,7 @@ export function logActivity(input: { kind: ActivityKind; title: string; minutes:
     goalId: input.goalId || undefined, questId: input.questId, xp, createdAt: Date.now(),
   }
   put('activity', newId(), activity)
-  if (xp) toast(xp, input.kind === 'attack' ? 'ATTACK' : 'DEFENSE')
+  if (xp) toast(xp, input.kind === 'attack' ? 'ATTACK' : 'DEFENSE', input.title, input.kind === 'attack' ? 'atk' : undefined)
 }
 
 export function deleteActivity(id: string) {
@@ -229,7 +237,7 @@ export function saveReview(date: string, comment: string, score?: number) {
     date, comment: comment.trim(), score, xp: existing?.xp ?? g.config.rules.review, createdAt: existing?.createdAt ?? Date.now(),
   }
   put('review', `review-${date}`, review)
-  if (!existing) toast(review.xp, 'REVIEW')
+  if (!existing) toast(review.xp, 'DEBRIEF', '今日の振り返り')
 }
 
 // ---------- 目標 ----------
@@ -251,11 +259,11 @@ export function toggleGoal(goal: WithId<Goal>) {
   const g = current()
   if (goal.done) {
     patch('goal', goal.id, { done: false, doneDate: undefined })
-    toast(-goal.xp, '達成を取り消し')
+    toast(-goal.xp, 'UNDO', goal.title)
   } else {
     patch('goal', goal.id, { done: true, doneDate: g.today })
     const label = goal.level === 'main' ? 'MAIN QUEST CLEAR' : goal.level === 'mid' ? 'MISSION CLEAR' : 'TASK CLEAR'
-    toast(goal.xp, label)
+    toast(goal.xp, label, goal.title)
   }
 }
 
@@ -300,7 +308,7 @@ export function logContact(personId: string, method: ContactMethod, note?: strin
   }
   put('contact', newId(), contact)
   if (clearNextAction) patch('person', personId, { nextAction: undefined, nextActionDue: undefined })
-  toast(contact.xp, 'CONTACT')
+  toast(contact.xp, 'CONTACT', g.persons.find((p) => p.id === personId)?.name)
 }
 
 export function deleteContact(id: string) {
@@ -363,8 +371,8 @@ export function saveChallenge(id: string | null, input: ChallengeInput) {
     createdAt: prev?.createdAt ?? Date.now(),
   }
   put('challenge', id ?? newId(), challenge)
-  if (!prev) toast(challenge.xp, input.result === 'fail' ? 'NICE TRY' : 'CHALLENGE')
-  if (challenge.post === 'posted' && prev?.post !== 'posted') setTimeout(() => toast(challenge.postXp ?? 0, 'POSTED'), prev ? 0 : 450)
+  if (!prev) toast(challenge.xp, input.result === 'fail' ? 'NICE TRY' : 'CHALLENGE', challenge.title, 'atk')
+  if (challenge.post === 'posted' && prev?.post !== 'posted') setTimeout(() => toast(challenge.postXp ?? 0, 'POSTED', challenge.title), prev ? 0 : 450)
 }
 
 export function setPostStatus(c: WithId<Challenge>, post: PostStatus) {
