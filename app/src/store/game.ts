@@ -91,6 +91,7 @@ export function deriveGame(records: Record<string, Rec>, now: Date) {
     todayActivities: lists.activity.filter((a) => a.date === today).sort(byCreated),
     todayReview: lists.review.find((r) => r.date === today) ?? null,
     isRestDay: rests.has(today),
+    restDates: rests,
     restsLeft: Math.max(0, config.rules.restDaysPerWeek - restsThisWeek),
     quests: lists.quest,
     activities: lists.activity.sort(byCreated),

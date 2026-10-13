@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { addDays, logicalToday, weekStart } from './date'
 import { DEFAULT_CONFIG, DEFAULT_RANKS } from './defaults'
 import {
-  activityXp, buildLedger, challengesByDate, computeRank, peakRank, winRate, goalProgress, childrenMap, personStatus, summarize, weeklyStats,
+  activityXp, buildLedger, challengesByDate, computeRank, dayVerdict, peakRank, winRate, goalProgress, childrenMap, personStatus, summarize, weeklyStats,
   type GameData,
 } from './game'
 import type { DailyQuest, Goal, RankDef, WithId } from './types'
@@ -245,5 +245,17 @@ describe('career', () => {
     const quests = [quest('2026-10-01', true), quest('2026-10-02', false), quest('2026-10-04', true)]
     expect(winRate(quests, new Set(['2026-10-03']), '2026-10-01', '2026-10-05')).toBe(67)
     expect(winRate([], new Set(), '2026-10-05', '2026-10-05')).toBeNull()
+  })
+})
+
+describe('verdict', () => {
+  it('ranks a day from PERFECT down to DEFEAT', () => {
+    const d = '2026-10-01'
+    expect(dayVerdict([quest(d, true), quest(d, true), quest(d, true)], 0, false)).toBe('PERFECT')
+    expect(dayVerdict([quest(d, true), quest(d, false)], 0, false)).toBe('VICTORY')
+    expect(dayVerdict([{ ...quest(d, false), started: true }], 0, false)).toBe('NICE TRY')
+    expect(dayVerdict([], 1, false)).toBe('NICE TRY')
+    expect(dayVerdict([], 0, true)).toBe('REST')
+    expect(dayVerdict([quest(d, false)], 0, false)).toBe('DEFEAT')
   })
 })

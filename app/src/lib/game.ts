@@ -264,6 +264,18 @@ export function winRate(quests: DailyQuest[], rests: Set<string>, startDate: str
   return days > 0 ? Math.round((won.size / days) * 100) : null
 }
 
+export type Verdict = 'PERFECT' | 'VICTORY' | 'NICE TRY' | 'REST' | 'DEFEAT'
+
+/** その日の勝敗（試合結果の表示用） */
+export function dayVerdict(quests: Pick<DailyQuest, 'done' | 'started'>[], challenges: number, rest: boolean): Verdict {
+  const done = quests.filter((q) => q.done).length
+  const started = quests.filter((q) => !q.done && q.started).length
+  if (quests.length >= MAX_DAILY_QUESTS && done === quests.length) return 'PERFECT'
+  if (done > 0) return 'VICTORY'
+  if (started > 0 || challenges > 0) return 'NICE TRY'
+  return rest ? 'REST' : 'DEFEAT'
+}
+
 // ---------- 集計 ----------
 
 export interface PeriodStat {

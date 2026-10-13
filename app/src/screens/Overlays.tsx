@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { CountUp } from '../components/CountUp'
-import { bootEndsAt } from '../components/Boot'
 import { Emblem } from '../components/Emblem'
-import { burst } from '../lib/fx'
-import { attackPct, computeRank, untouched } from '../lib/game'
+import { burst, buzz } from '../lib/fx'
+import { afterIntro } from '../lib/intro'
+import { attackPct, computeRank, dayVerdict, untouched } from '../lib/game'
 import { useCloud } from '../store/cloud'
 import { useData } from '../store/data'
 import { useGame, type Game } from '../store/game'
@@ -25,9 +25,8 @@ export function RankChange() {
     localStorage.setItem(TIER_KEY, JSON.stringify({ key: g.rank.tierKey, name: g.rank.fullName }))
     if (!prev || prev.key === g.rank.tierKey) return
     const next = { dir: g.rank.tierKey > prev.key ? ('up' as const) : ('down' as const), from: prev.name }
-    // 起動演出の最中なら、終わってから出す
-    const t = setTimeout(() => setShown(next), Math.max(0, bootEndsAt - Date.now()))
-    return () => clearTimeout(t)
+    // 起動時の演出の最中なら、終わってから出す
+    return afterIntro(() => setShown(next))
   }, [ready, g.rank.tierKey, g.rank.fullName])
 
   if (!shown) return null
@@ -39,8 +38,8 @@ export function RankChange() {
   )
 }
 
-/** 同期の初回取り込みが終わるまでは、ランク変化の演出を出さない */
-function useReady() {
+/** 同期の初回取り込みが終わるまでは、ランク変化などの演出を出さない */
+export function useReady() {
   const loaded = useData((s) => s.loaded)
   const pulled = useData((s) => s.sync.lastPulledAt !== null)
   const { auth, localMode } = useCloud()
@@ -53,6 +52,7 @@ function PromotedCut({ g, from, onClose }: { g: Game; from: string; onClose: () 
 
   useEffect(() => {
     // エンブレムが着地した瞬間に火花
+    buzz([30, 60, 90])
     const timers = [650, 900].map((ms, i) =>
       setTimeout(() => {
         const el = emblemRef.current
@@ -85,6 +85,7 @@ function PromotedCut({ g, from, onClose }: { g: Game; from: string; onClose: () 
 
 function DemotedCut({ g, from, onClose }: { g: Game; from: string; onClose: () => void }) {
   const r = g.rank
+  useEffect(() => buzz([140, 80, 140]), [])
   const penalties = g.entries.filter((e) => e.kind === 'penalty').slice(-3).reverse()
   return (
     <div className="cut down" onClick={onClose}>
@@ -124,11 +125,7 @@ function ResultView({ g, onClose }: { g: Game; onClose: () => void }) {
   const done = g.todayQuests.filter((q) => q.done).length
   const started = g.todayQuests.filter((q) => !q.done && q.started).length
   const missed = g.todayQuests.filter(untouched).length
-  const verdict =
-    set > 0 && done === set && set >= 3 ? 'PERFECT'
-      : done > 0 ? 'VICTORY'
-        : started > 0 || g.challenges.today > 0 ? 'NICE TRY'
-          : g.isRestDay ? 'REST' : 'DEFEAT'
+  const verdict = dayVerdict(g.todayQuests, g.challenges.today, g.isRestDay)
   const win = verdict !== 'DEFEAT'
   const net = s.gain + s.loss
   const pct = attackPct(s)
@@ -144,6 +141,11 @@ function ResultView({ g, onClose }: { g: Game; onClose: () => void }) {
     const t = setTimeout(() => setBarPct(toPct), 1100)
     return () => clearTimeout(t)
   }, [toPct])
+
+  // その日いちばん XP を稼いだ行動（ボーナス類は除く）
+  const mvp = g.todayEntries
+    .filter((e) => e.amount > 0 && !['perfect', 'streak', 'review'].includes(e.kind))
+    .reduce<(typeof g.todayEntries)[number] | null>((best, e) => (!best || e.amount > best.amount ? e : best), null)
 
   const rows: [string, ReactNode][] = [
     ['獲得XP', <CountUp key="xp" value={net} from={0} delay={500} signed />],
@@ -171,6 +173,13 @@ function ResultView({ g, onClose }: { g: Game; onClose: () => void }) {
             </div>
           ))}
         </div>
+        {mvp && (
+          <div className="mr-mvp">
+            <span className="mvp-tag">MVP</span>
+            <span className="mvp-label">{mvp.label}</span>
+            <b>+{mvp.amount}</b>
+          </div>
+        )}
         {g.todayReview?.comment && <div className="result-comment">{g.todayReview.comment}</div>}
         <div className="mr-rank">
           <Emblem color={r.rank.color} index={r.index} total={r.ranks.length} division={r.division} divisions={r.rank.divisions} size={54} animated={false} />

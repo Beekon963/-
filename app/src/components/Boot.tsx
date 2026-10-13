@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
+import { intro } from '../lib/intro'
 
 let shownThisLaunch = false
-/** 起動演出が終わる時刻（他の演出はこれを待つ） */
-export let bootEndsAt = 0
 
 function reduced() {
   return typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -10,13 +9,17 @@ function reduced() {
 
 /** 起動時に一度だけ流れるロード演出（タップで飛ばせる） */
 export function Boot({ rankName, color }: { rankName: string; color: string }) {
-  const [phase, setPhase] = useState<'on' | 'out' | 'off'>(() => (shownThisLaunch || reduced() ? 'off' : 'on'))
+  const [phase, setPhase] = useState<'on' | 'out' | 'off'>(() => {
+    if (shownThisLaunch || reduced()) return 'off'
+    // 描画の時点で終了時刻を決めておく（後に続く演出がこれを見て待つ）
+    intro.bootEndsAt = Date.now() + 1700
+    return 'on'
+  })
 
   // フェーズごとに次のフェーズだけを予約する（前のフェーズの片付けで消されないように）
   useEffect(() => {
     if (phase === 'on') {
       shownThisLaunch = true
-      bootEndsAt = Date.now() + 1700
       const t = setTimeout(() => setPhase('out'), 1350)
       return () => clearTimeout(t)
     }
@@ -24,6 +27,7 @@ export function Boot({ rankName, color }: { rankName: string; color: string }) {
       const t = setTimeout(() => setPhase('off'), 350)
       return () => clearTimeout(t)
     }
+    if (phase === 'off') intro.bootEndsAt = Math.min(intro.bootEndsAt, Date.now())
   }, [phase])
 
   if (phase === 'off') return null
