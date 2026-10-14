@@ -1,6 +1,7 @@
 import type { Config, RankDef, XpRules } from './types'
 
 export const MAX_DAILY_QUESTS = 3
+export const MAX_PERIOD_GOALS = 3
 
 export const DEFAULT_RULES: XpRules = {
   quest: [20, 40, 60],
@@ -18,6 +19,11 @@ export const DEFAULT_RULES: XpRules = {
   startedPct: 50,
   challenge: 20,
   post: 30,
+  penaltyNoPlan: 30,
+  penaltyNoWeekPlan: 100,
+  penaltyNoMonthPlan: 200,
+  weekGoal: 100,
+  monthGoal: 300,
 }
 
 export const DEFAULT_RANKS: RankDef[] = [

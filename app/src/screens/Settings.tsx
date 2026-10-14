@@ -23,6 +23,11 @@ const RULE_ROWS: { key: NumKey; label: string }[] = [
   { key: 'startedPct', label: '着手したデイリーのXP（%）' },
   { key: 'challenge', label: '挑戦ログ1件' },
   { key: 'post', label: '挑戦を発信した' },
+  { key: 'weekGoal', label: '週の目標1つ達成' },
+  { key: 'monthGoal', label: '月の目標1つ達成' },
+  { key: 'penaltyNoPlan', label: '降格：明日のクエストを前日に書かなかった' },
+  { key: 'penaltyNoWeekPlan', label: '降格：来週の目標を日曜までに書かなかった' },
+  { key: 'penaltyNoMonthPlan', label: '降格：来月の目標を月末までに書かなかった' },
 ]
 
 export function Settings() {

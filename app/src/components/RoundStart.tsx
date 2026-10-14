@@ -68,6 +68,11 @@ export function RoundStart({ g }: { g: Game }) {
         </div>
       )}
       {!rest && <div className="rs-goal">昨日より一つでも多く ・ 今日の挑戦 <b>{goal}</b>回以上</div>}
+      {!rest && (
+        <div className={`rs-plan${g.todayPlanned ? ' ok' : ''}`}>
+          {g.todayPlanned ? `PLANNED ・ 前日に書いた作戦 ${g.todayQuests.length}つで戦う` : 'NO PLAN ・ まず今日のクエストを決めよう'}
+        </div>
+      )}
     </div>
   )
 }
