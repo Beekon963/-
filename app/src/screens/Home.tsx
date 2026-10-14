@@ -1,25 +1,27 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ChallengeSheet } from '../components/ChallengeSheet'
+import { NextRoundPlanner, Operations } from '../components/Operations'
+import { QuestSheet, type QuestSheetState } from '../components/QuestSheet'
 import { CountUp } from '../components/CountUp'
 import { Check, IconAlert, IconBolt, IconChevron, IconClose, IconFlame, IconGear, IconMore, IconPlus } from '../components/Icons'
-import { GoalSelect, MinutesPick, StarsPick, fmtMin } from '../components/forms'
+import { GoalSelect, MinutesPick, fmtMin } from '../components/forms'
 import { RankHero } from '../components/RankHero'
 import { Sheet } from '../components/Sheet'
 import { daysBetween, formatDot, localDate } from '../lib/date'
 import { burst, buzz, centerOf, floatText, pulseClass } from '../lib/fx'
 import { MAX_DAILY_QUESTS } from '../lib/defaults'
 import { attackPct, personStatus, startedXp } from '../lib/game'
-import type { ActivityKind, DailyQuest, Stars, WithId } from '../lib/types'
+import type { ActivityKind, DailyQuest, WithId } from '../lib/types'
 import { useCloud } from '../store/cloud'
 import {
-  addQuest, deleteActivity, deleteQuest, editQuest, logActivity, saveReview, setConditionCleared, setRestDay,
+  deleteActivity, logActivity, saveReview, setConditionCleared, setRestDay,
   toggleQuest, toggleStarted, useGame, type Game,
 } from '../store/game'
 import { openPage, useUI } from '../store/ui'
 
 export function Home() {
   const g = useGame()
-  const [questSheet, setQuestSheet] = useState<{ quest?: WithId<DailyQuest> } | null>(null)
+  const [questSheet, setQuestSheet] = useState<QuestSheetState>(null)
   const [timeFor, setTimeFor] = useState<WithId<DailyQuest> | null>(null)
   const [logKind, setLogKind] = useState<ActivityKind | null>(null)
   const [reviewOpen, setReviewOpen] = useState(false)
@@ -121,6 +123,8 @@ export function Home() {
           </div>
         )}
       </section>
+
+      <Operations g={g} />
 
       {/* ATTACK / DEFENSE */}
       <section className="sec">
@@ -330,7 +334,10 @@ function QuestCard({ q, slot, goalTitle, startedXp, onToggle, onStart, onMore }:
           )}
         </span>
         <span className="q-body">
-          <span className="obj-state">OBJ {letter} ・ {state}</span>
+          <span className="obj-state">
+            OBJ {letter} ・ {state}
+            {q.kind === 'challenge' && <span className="kind-tag">挑戦</span>}
+          </span>
           <span className="q-title">{q.title}</span>
           {goalTitle && <span className="q-link"><i>◆</i>{goalTitle}</span>}
         </span>
@@ -438,61 +445,6 @@ function SquadLineup({ g }: { g: Game }) {
 
 // ---------- sheets ----------
 
-function QuestSheet({ g, state, onClose }: { g: Game; state: { quest?: WithId<DailyQuest> } | null; onClose: () => void }) {
-  const editing = state?.quest
-  const [title, setTitle] = useState('')
-  const [stars, setStars] = useState<Stars>(2)
-  const [goalId, setGoalId] = useState('')
-  const [lastKey, setLastKey] = useState<string | null>(null)
-
-  const key = state ? editing?.id ?? 'new' : null
-  if (key !== lastKey) {
-    setLastKey(key)
-    setTitle(editing?.title ?? '')
-    setStars(editing?.stars ?? 2)
-    setGoalId(editing?.goalId ?? '')
-  }
-
-  const submit = () => {
-    if (!title.trim()) return
-    if (editing) editQuest(editing.id, { title, stars, goalId })
-    else addQuest({ title, stars, goalId })
-    onClose()
-  }
-
-  return (
-    <Sheet open={!!state} onClose={onClose} en={editing ? 'EDIT QUEST' : 'NEW QUEST'} ja={editing ? 'クエストを編集' : '今日のクエスト'}>
-      <div className="field">
-        <label>目標に効く行動</label>
-        <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="例：新規の代理店2社にアポ打診" autoFocus={!editing} />
-      </div>
-      <div className="field">
-        <label>難易度</label>
-        <StarsPick value={stars} onChange={setStars} rules={g.config.rules} />
-      </div>
-      <div className="field">
-        <label>どの目標に効く？</label>
-        <GoalSelect goals={g.goals} value={goalId} onChange={setGoalId} />
-        {g.goals.length === 0 && <div className="help">クエストタブで大目標を登録すると、ここで紐づけられます。</div>}
-      </div>
-      <button className="btn" disabled={!title.trim()} onClick={submit}>{editing ? '保存する' : 'クエストを受注'}</button>
-      {editing && (
-        <button
-          className="btn danger"
-          style={{ marginTop: 8 }}
-          onClick={() => {
-            if (confirm('このクエストを削除しますか？')) {
-              deleteQuest(editing.id)
-              onClose()
-            }
-          }}
-        >
-          削除する
-        </button>
-      )}
-    </Sheet>
-  )
-}
 
 function TimeSheet({ quest, onClose }: { quest: WithId<DailyQuest> | null; onClose: () => void }) {
   return (
@@ -608,6 +560,7 @@ export function ReviewSheet({ g, open, onClose, date }: { g: Game; open: boolean
   return (
     <Sheet open={open} onClose={onClose} en="DEBRIEF" ja={target === g.today ? '今日の振り返り' : `${target} の振り返り`}>
       {target === g.today && <UnfinishedQuests g={g} />}
+      {target === g.today && <NextRoundPlanner g={g} />}
       <div className="field">
         <label>今日を一言で</label>
         <textarea className="input" value={comment} onChange={(e) => setComment(e.target.value)} placeholder="例：アポは取れた。計画書は逃げた。明日は朝イチでやる。" />

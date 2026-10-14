@@ -152,6 +152,9 @@ function ResultView({ g, onClose }: { g: Game; onClose: () => void }) {
     ['クエスト', <>{done}<small>/{set}</small>{started > 0 && <small className="tag-started">着手{started}</small>}</>],
     ['攻め率', pct === null ? '--' : <><CountUp key="pct" value={pct} from={0} delay={760} />%</>],
     ['今日の挑戦', <><CountUp key="ch" value={g.challenges.today} from={0} delay={880} /><small>回 ・ 昨日 {g.challenges.yesterday}</small></>],
+    ['明日の作戦', g.tomorrowQuests.length
+      ? <>{g.tomorrowQuests.length}<small>/3 ・ 作成済み</small></>
+      : <small className="tag-none">まだ書いていない</small>],
   ]
 
   return (

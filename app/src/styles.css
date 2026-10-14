@@ -895,3 +895,76 @@ body {
 .sheet-h::after { content:''; position:absolute; left:0; bottom:-1px; width:56px; height:2px; background:var(--rank); box-shadow:0 0 8px var(--rank-glow); }
 .sheet-h .en::before { content:'// '; color:var(--atk); }
 .sheet-h .en { font-weight:800; font-size:17px; letter-spacing:.1em; }
+
+/* ===================================================================
+   PLANNING（明日・今週・今月）
+   =================================================================== */
+.kind-tag { display:inline-block; margin-left:6px; padding:0 6px; font-family:var(--font); font-size:9px; font-weight:700; letter-spacing:0;
+  color:#160c02; background:var(--atk); vertical-align:1px; }
+
+/* ホームの OPERATIONS */
+.ops { border:1px solid var(--line); background:var(--panel); }
+.ops-row { display:flex; align-items:center; gap:10px; width:100%; text-align:left; padding:11px 12px; border-left:3px solid var(--line3); }
+.ops-row + .ops-row { border-top:1px solid var(--line); }
+.ops-row:active { background:var(--panel2); }
+.ops-row.ok { border-left-color:#35e0a1; }
+.ops-row.warn { border-left-color:var(--atk); }
+.ops-row.hot { border-left-color:var(--danger); background:linear-gradient(90deg, rgba(255,70,85,.10), transparent 60%); }
+.ops-row.hot .ops-note { color:var(--danger); }
+.ops-row.warn .ops-note { color:var(--atk); }
+.ops-row.ok .ops-note { color:#35e0a1; }
+.ops-main { flex:1; min-width:0; }
+.ops-head { display:flex; align-items:baseline; gap:8px; }
+.ops-en { font-family:var(--hud); font-weight:800; font-size:14px; letter-spacing:.08em; white-space:nowrap; }
+.ops-ja { font-size:11px; color:var(--sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ops-note { font-size:11px; color:var(--sub); margin-top:2px; line-height:1.5; }
+.ops-pips { display:flex; gap:3px; }
+.ops-pips i { width:8px; height:8px; transform:rotate(45deg); border:1px solid var(--line3); }
+.ops-pips i.set { border-color:var(--rank); }
+.ops-pips i.on { background:var(--rank); border-color:var(--rank); box-shadow:0 0 6px var(--rank-glow); }
+.ops-val { font-family:var(--hud); font-weight:800; font-size:18px; min-width:30px; text-align:right; }
+.ops-go { color:var(--mute); font-family:var(--hud); font-weight:700; }
+
+/* クエストタブの切り替え */
+.seg { display:grid; grid-template-columns:repeat(4, 1fr); margin:0 16px 16px; border:1px solid var(--line2); background:var(--panel); }
+.seg button { position:relative; padding:10px 0; font-weight:700; font-size:13px; color:var(--sub); }
+.seg button + button { border-left:1px solid var(--line); }
+.seg button.on { color:#08090c; background:var(--rank); }
+.seg-dot { position:absolute; top:6px; right:8px; width:6px; height:6px; border-radius:50%; background:var(--danger); box-shadow:0 0 6px var(--danger); }
+.seg button.on .seg-dot { background:#08090c; box-shadow:none; }
+.row-end { display:flex; justify-content:flex-end; margin-bottom:10px; }
+
+/* 計画の状態カード */
+.plan-card { position:relative; padding:12px 14px; margin-bottom:10px; background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--line3); }
+.plan-card.ok { border-left-color:#35e0a1; }
+.plan-card.warn { border-left-color:var(--atk); }
+.plan-card.hot { border-left-color:var(--danger); background:linear-gradient(90deg, rgba(255,70,85,.12), var(--panel) 70%); }
+.pc-kicker { font-family:var(--hud); font-weight:700; font-size:11px; letter-spacing:.14em; color:var(--sub); }
+.pc-kicker::before { content:'// '; color:var(--atk); }
+.pc-title { font-size:16px; font-weight:900; margin-top:3px; }
+.plan-card.ok .pc-title { color:#35e0a1; }
+.plan-card.hot .pc-title { color:var(--danger); }
+.pc-rule { font-size:11px; color:var(--sub); margin-top:4px; line-height:1.6; }
+.quest.obj.planned { border-left-color:var(--line3); }
+.quest.obj.planned .obj-letter { color:var(--text); }
+
+/* 週・月の目標ブロック */
+.pblock { border:1px solid var(--line); background:var(--panel); padding:12px 12px 4px; }
+.pblock-h { display:flex; align-items:baseline; gap:8px; margin-bottom:8px; }
+.pblock-h .t { font-weight:900; font-size:15px; }
+.pblock-h .r { font-family:var(--hud); font-weight:700; font-size:12px; color:var(--sub); letter-spacing:.04em; }
+.pblock-h .n { margin-left:auto; font-family:var(--hud); font-weight:800; font-size:16px; color:var(--rank); }
+.pblock .g-row { padding:10px 0; }
+.pblock .slot { margin:8px 0; }
+.pg-dot { width:10px; height:10px; margin:0 6px; transform:rotate(45deg); border:1.5px solid var(--line3); flex-shrink:0; }
+
+/* 振り返りでの明日の作戦 */
+.next-round label b { color:var(--danger); }
+.nr-item { display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid var(--line); font-size:13px; }
+.nr-item .t { flex:1; min-width:0; }
+.nr-letter { width:24px; height:24px; display:grid; place-items:center; font-family:var(--display); font-weight:800; font-size:15px;
+  color:#08090c; background:var(--rank); clip-path:polygon(4px 0,100% 0,calc(100% - 4px) 100%,0 100%); flex-shrink:0; }
+
+.rs-plan { margin-top:6px; font-family:var(--hud); font-weight:700; font-size:12px; letter-spacing:.08em; color:var(--danger); opacity:0; animation:fadeUp .3s ease .85s forwards; }
+.rs-plan.ok { color:#35e0a1; }
+.mr-row .tag-none { color:var(--danger) !important; font-size:13px !important; }

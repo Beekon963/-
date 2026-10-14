@@ -46,6 +46,16 @@ export interface XpRules {
   challenge: number
   /** 挑戦を発信した */
   post: number
+  /** 前日までに明日のクエストを書かなかった */
+  penaltyNoPlan: number
+  /** 前の週のうちに今週の目標を書かなかった */
+  penaltyNoWeekPlan: number
+  /** 前の月のうちに今月の目標を書かなかった */
+  penaltyNoMonthPlan: number
+  /** 週の目標1つ達成 */
+  weekGoal: number
+  /** 月の目標1つ達成 */
+  monthGoal: number
 }
 
 export interface Config {
@@ -59,6 +69,8 @@ export interface Config {
 export interface Profile {
   /** 降格ペナルティの計算を始める日 */
   startDate: string
+  /** 「前日までに書く」ルールを始める日（過去にさかのぼって減点しないため） */
+  planSince?: string
 }
 
 export interface Goal {
@@ -82,8 +94,12 @@ export interface DailyQuest {
   done: boolean
   /** 着手した（途中まで）。XPは一部、ペナルティなし */
   started?: boolean
+  /** タスク（やること）か挑戦（やったことのないこと）か */
+  kind?: QuestKind
   createdAt: number
 }
+
+export type QuestKind = 'task' | 'challenge'
 
 export interface Activity {
   date: string
@@ -143,6 +159,21 @@ export interface Challenge {
   createdAt: number
 }
 
+export type PeriodKind = 'week' | 'month'
+
+/** 週・月の目標（期間の初日 start で区切る） */
+export interface PeriodGoal {
+  period: PeriodKind
+  /** 週は月曜日、月は1日 */
+  start: string
+  title: string
+  goalId?: string
+  done: boolean
+  doneDate?: string
+  xp: number
+  createdAt: number
+}
+
 export interface RestDay {
   date: string
 }
@@ -185,6 +216,7 @@ export interface RecordMap {
   rest: RestDay
   vision: Vision
   challenge: Challenge
+  pgoal: PeriodGoal
 }
 
 export type RecType = keyof RecordMap

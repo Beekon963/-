@@ -259,3 +259,52 @@ describe('verdict', () => {
     expect(dayVerdict([quest(d, false)], 0, false)).toBe('DEFEAT')
   })
 })
+
+describe('planning ahead', () => {
+  const at = (y: number, m: number, d: number) => new Date(y, m - 1, d, 12).getTime()
+  const planned = (date: string, createdAt: number) => ({ ...quest(date, false), createdAt })
+  const planPenalties = (g: GameData) =>
+    buildLedger(g).entries.filter((e) => e.kind === 'penalty' && e.label.includes('書かなかった')).map((e) => [e.date, e.amount, e.label])
+  const dailyPlan = (g: GameData) => planPenalties(g).filter((p) => String(p[2]).includes('明日'))
+
+  it('charges when tomorrow was not written by the end of the day', () => {
+    const g = game({
+      startDate: '2026-10-01', today: '2026-10-05', planSince: '2026-10-01',
+      quests: [planned('2026-10-03', at(2026, 10, 2)), planned('2026-10-04', at(2026, 10, 4))],
+    })
+    // 10/01 は開始日、10/02 は書けている、10/03 は当日に書いたので遅い、10/04 は未記入、10/05 は今日
+    expect(dailyPlan(g)).toEqual([
+      ['2026-10-03', -30, '明日のクエストを書かなかった'],
+      ['2026-10-04', -30, '明日のクエストを書かなかった'],
+    ])
+  })
+
+  it('never charges before the rule started', () => {
+    expect(planPenalties(game({ startDate: '2026-10-01', today: '2026-10-05' }))).toEqual([])
+    expect(dailyPlan(game({ startDate: '2026-10-01', today: '2026-10-05', planSince: '2026-10-04' }))).toEqual([
+      ['2026-10-04', -30, '明日のクエストを書かなかった'],
+    ])
+  })
+
+  it('requires next week goals by Sunday and next month goals by the last day', () => {
+    const base = { startDate: '2026-10-05', today: '2026-10-13', planSince: '2026-10-05' }
+    const weekPenalty = (g: GameData) => planPenalties(g).filter((p) => String(p[2]).includes('来週'))
+    expect(weekPenalty(game(base))).toEqual([['2026-10-11', -100, '来週の目標を書かなかった']])
+    const goal = { id: 'w', period: 'week' as const, start: '2026-10-12', title: 'w', done: false, xp: 100, createdAt: at(2026, 10, 11) }
+    expect(weekPenalty(game({ ...base, periodGoals: [goal] }))).toEqual([])
+
+    const month = planPenalties(game({ startDate: '2026-10-29', today: '2026-11-02', planSince: '2026-10-29' }))
+    expect(month.filter((p) => String(p[2]).includes('来月'))).toEqual([['2026-10-31', -200, '来月の目標を書かなかった']])
+  })
+
+  it('pays for achieved week and month goals', () => {
+    const g = game({
+      today: '2026-10-03',
+      periodGoals: [
+        { id: 'w', period: 'week', start: '2026-09-28', title: '新規3社', done: true, doneDate: '2026-10-02', xp: 100, createdAt: 0 },
+        { id: 'm', period: 'month', start: '2026-10-01', title: '月商', done: false, xp: 300, createdAt: 0 },
+      ],
+    })
+    expect(buildLedger(g).entries.filter((e) => e.kind === 'pgoal').map((e) => [e.date, e.amount])).toEqual([['2026-10-02', 100]])
+  })
+})

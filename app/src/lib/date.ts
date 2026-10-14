@@ -61,3 +61,14 @@ export function formatJa(date: string) {
 export function localDate(ms: number) {
   return logicalToday(new Date(ms), 0)
 }
+
+/** その月の1日 */
+export function monthStart(date: string) {
+  return `${date.slice(0, 7)}-01`
+}
+
+/** 翌月の1日 */
+export function nextMonthStart(date: string) {
+  const [y, m] = date.split('-').map(Number)
+  return m === 12 ? `${y + 1}-01-01` : `${y}-${pad(m + 1)}-01`
+}
