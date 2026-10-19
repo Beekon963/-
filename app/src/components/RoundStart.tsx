@@ -23,6 +23,7 @@ export function RoundStart({ g }: { g: Game }) {
       ? {
           verdict: dayVerdict(g.quests.filter((q) => q.date === y), g.challenges.yesterday, g.restDates.has(y)),
           net: g.entries.filter((e) => e.date === y).reduce((sum, e) => sum + e.amount, 0),
+          insured: g.autoRests.has(y),
         }
       : null
     return { start, prev, round: daysBetween(g.startDate, g.today) + 1 }
@@ -67,7 +68,16 @@ export function RoundStart({ g }: { g: Game }) {
           <span className="xp">{info.prev.net >= 0 ? '+' : ''}{info.prev.net} XP</span>
         </div>
       )}
+      {info.prev?.insured && <div className="rs-shield">SHIELD ・ 保険で休息日に。連続はつながっている</div>}
+      {!rest && g.comebackReady && (
+        <div className="rs-back">WELCOME BACK ・ 1つ着手で COMEBACK <b>+{g.config.rules.comebackBonus}</b> XP</div>
+      )}
       {!rest && <div className="rs-goal">昨日より一つでも多く ・ 今日の挑戦 <b>{goal}</b>回以上</div>}
+      {!rest && (
+        <div className={`rs-plan${g.todayPlanned ? ' ok' : ''}`}>
+          {g.todayPlanned ? `PLANNED ・ 前日に書いた作戦 ${g.todayQuests.length}つで戦う` : 'NO PLAN ・ まず今日のクエストを決めよう'}
+        </div>
+      )}
     </div>
   )
 }

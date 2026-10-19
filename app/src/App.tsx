@@ -89,7 +89,7 @@ function Game() {
           <div key={t.id} className={`feed-row${t.amount < 0 ? ' neg' : t.tone === 'atk' ? ' atk' : ''}`}>
             <span className="tag">{t.label}</span>
             {t.detail && <span className="d">{t.detail}</span>}
-            <span className="a">{t.amount >= 0 ? '+' : ''}{t.amount}</span>
+            {t.amount !== 0 && <span className="a">{t.amount > 0 ? '+' : ''}{t.amount}</span>}
           </div>
         ))}
       </div>

@@ -1,13 +1,14 @@
 // ゲームの計算はすべてここ。XPは記録から毎回計算する（XP自体は保存しない）
 
-import { addDays, daysBetween, weekStart } from './date'
-import { MAX_DAILY_QUESTS } from './defaults'
+import { addDays, daysBetween, logicalToday, weekStart, weekday } from './date'
+import { MAX_DAILY_QUESTS, MODES, type ModeDef } from './defaults'
 import type {
-  Activity, Challenge, Config, Contact, DailyQuest, Goal, Person, RankCondition, RankDef, Review, WithId, XpRules,
+  Activity, Challenge, Config, Contact, DailyQuest, Goal, PeriodGoal, Person, RankCondition, RankDef, Review, WithId, XpRules,
 } from './types'
 
 export type XpKind =
-  | 'quest' | 'started' | 'perfect' | 'activity' | 'goal' | 'contact' | 'review' | 'challenge' | 'post' | 'streak' | 'penalty'
+  | 'quest' | 'started' | 'perfect' | 'activity' | 'goal' | 'pgoal' | 'contact' | 'review' | 'challenge' | 'post' | 'streak' | 'penalty'
+  | 'comeback' | 'insurance'
 
 export interface XpEntry {
   date: string
@@ -27,7 +28,10 @@ export interface GameData {
   contacts: WithId<Contact>[]
   reviews: WithId<Review>[]
   challenges: WithId<Challenge>[]
+  periodGoals?: WithId<PeriodGoal>[]
   rests: Set<string>
+  /** 「前日までに書く」ルールを始める日。null ならルールなし */
+  planSince?: string | null
 }
 
 function groupBy<T>(items: T[], key: (item: T) => string) {
@@ -58,11 +62,14 @@ export function activityXp(minutes: number, kind: Activity['kind'], rules: XpRul
 /**
  * XP台帳を作る。降格ペナルティ（過去日のデイリー未着手・未設定）と
  * 連続日数ボーナスもここで決まる。開始日は猶予日としてペナルティ対象外。
+ * 減点の重さと「保険」（何もできなかった日の自動休息）は試合モードで変わる。
  */
 export function buildLedger(g: GameData) {
   const { rules } = g.config
+  const mode = MODES[g.config.mode] ?? MODES.standard
   const entries: XpEntry[] = []
   const questsByDate = groupBy(g.quests, (q) => q.date)
+  const challengeDays = new Set(g.challenges.map((c) => c.date))
 
   for (const q of g.quests) {
     if (q.done) entries.push({ date: q.date, amount: q.xp, kind: 'quest', label: q.title, refId: q.id })
@@ -89,6 +96,12 @@ export function buildLedger(g: GameData) {
   for (const r of g.reviews) {
     entries.push({ date: r.date, amount: r.xp, kind: 'review', label: '振り返り', refId: r.id })
   }
+  for (const p of g.periodGoals ?? []) {
+    if (p.done && p.doneDate) {
+      const label = `${p.period === 'week' ? '週' : '月'}の目標：${p.title}`
+      entries.push({ date: p.doneDate, amount: p.xp, kind: 'pgoal', label, refId: p.id })
+    }
+  }
   for (const c of g.challenges) {
     entries.push({ date: c.date, amount: c.xp, kind: 'challenge', label: `挑戦：${c.title}`, refId: c.id })
     if (c.post === 'posted' && c.postedDate && c.postXp) {
@@ -96,15 +109,42 @@ export function buildLedger(g: GameData) {
     }
   }
 
+  // 自分で決めた休息日を先に数え、週の残りの枠を「保険」にする
+  const restsPerWeek = new Map<string, number>()
+  for (const d of g.rests) restsPerWeek.set(weekStart(d), (restsPerWeek.get(weekStart(d)) ?? 0) + 1)
+  const autoRests = new Set<string>()
+
   let streak = 0
   let bestStreak = 0
+  /** 連続が途切れたまま、まだ戻ってきていない */
+  let broken = false
+  let lastComeback: string | null = null
+  const comebackOk = (d: string) => rules.comebackBonus > 0 && (!lastComeback || daysBetween(lastComeback, d) >= 7)
+
   for (let d = g.startDate; d <= g.today; d = addDays(d, 1)) {
     const qs = questsByDate.get(d) ?? []
-    const active = qs.some((q) => !untouched(q))
-    const rest = g.rests.has(d)
+    // 最低ライン：デイリーに1つ手をつける（着手でもいい）か、挑戦を1回記録する
+    const active = qs.some((q) => !untouched(q)) || challengeDays.has(d)
     const past = d < g.today
+    let rest = g.rests.has(d)
+
+    if (past && !active && !rest && d !== g.startDate && mode.insurance) {
+      const w = weekStart(d)
+      const used = restsPerWeek.get(w) ?? 0
+      if (used < rules.restDaysPerWeek) {
+        restsPerWeek.set(w, used + 1)
+        autoRests.add(d)
+        rest = true
+        entries.push({ date: d, amount: 0, kind: 'insurance', label: '保険：自動で休息日（連続キープ）' })
+      }
+    }
 
     if (active) {
+      if (broken && comebackOk(d)) {
+        entries.push({ date: d, amount: rules.comebackBonus, kind: 'comeback', label: 'COMEBACK ボーナス' })
+        lastComeback = d
+      }
+      broken = false
       streak++
       bestStreak = Math.max(bestStreak, streak)
       if (rules.streakEvery > 0 && streak % rules.streakEvery === 0) {
@@ -112,23 +152,76 @@ export function buildLedger(g: GameData) {
       }
     } else if (past && !rest) {
       streak = 0
+      if (d !== g.startDate) broken = true
     }
 
     if (past && !rest && d !== g.startDate) {
+      const day: XpEntry[] = []
       if (qs.length === 0) {
-        entries.push({ date: d, amount: -rules.penaltyNoQuest, kind: 'penalty', label: 'デイリー未設定（不戦敗）' })
+        day.push({ date: d, amount: -rules.penaltyNoQuest, kind: 'penalty', label: 'デイリー未設定（不戦敗）' })
       } else {
         const missed = qs.filter(untouched).length
         if (missed > 0) {
-          entries.push({
+          day.push({
             date: d, amount: -missed * rules.penaltyMissedQuest, kind: 'penalty', label: `デイリー未着手 ×${missed}`,
           })
         }
       }
+      if (g.planSince && d >= g.planSince) day.push(...missedPlans(g, d, questsByDate))
+      entries.push(...applyMode(day, mode))
     }
   }
 
-  return { entries, streak, bestStreak }
+  return {
+    entries,
+    streak,
+    bestStreak,
+    autoRests,
+    /** 今日1つ手をつければ COMEBACK ボーナスがもらえる */
+    comebackReady: broken && comebackOk(g.today),
+  }
+}
+
+/** モードをかけたあとの減点（1日の上限も考える） */
+export function penaltyFor(amount: number, mode: ModeDef) {
+  const n = Math.round(amount * mode.penalty)
+  return mode.cap === null ? n : Math.min(n, mode.cap)
+}
+
+/** その日の減点にモードの倍率と上限をかける */
+export function applyMode(day: XpEntry[], mode: ModeDef): XpEntry[] {
+  let room = mode.cap ?? Infinity
+  const out: XpEntry[] = []
+  for (const e of day) {
+    const full = Math.round(-e.amount * mode.penalty)
+    const amount = Math.min(room, full)
+    if (amount <= 0) continue
+    room -= amount
+    out.push({ ...e, amount: -amount, label: amount < full ? `${e.label}（1日の上限）` : e.label })
+  }
+  return out
+}
+
+/** その日（d）のうちに書いておくべきだった「次の日・次の週・次の月」の計画 */
+export function missedPlans(g: GameData, d: string, questsByDate: Map<string, DailyQuest[]>): XpEntry[] {
+  const { rules, dayStartHour } = g.config
+  const writtenBy = (createdAt: number) => logicalToday(new Date(createdAt), dayStartHour) <= d
+  const out: XpEntry[] = []
+  const next = addDays(d, 1)
+
+  if (!(questsByDate.get(next) ?? []).some((q) => writtenBy(q.createdAt))) {
+    out.push({ date: d, amount: -rules.penaltyNoPlan, kind: 'penalty', label: '明日のクエストを書かなかった' })
+  }
+  const planned = (period: PeriodGoal['period']) =>
+    (g.periodGoals ?? []).some((p) => p.period === period && p.start === next && writtenBy(p.createdAt))
+  // 週は月曜はじまり → 日曜日が来週の目標の締め切り
+  if (weekday(d) === 0 && !planned('week')) {
+    out.push({ date: d, amount: -rules.penaltyNoWeekPlan, kind: 'penalty', label: '来週の目標を書かなかった' })
+  }
+  if (next.endsWith('-01') && !planned('month')) {
+    out.push({ date: d, amount: -rules.penaltyNoMonthPlan, kind: 'penalty', label: '来月の目標を書かなかった' })
+  }
+  return out
 }
 
 export interface DayXp {

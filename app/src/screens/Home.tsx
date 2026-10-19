@@ -1,25 +1,27 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ChallengeSheet } from '../components/ChallengeSheet'
+import { NextRoundPlanner, Operations } from '../components/Operations'
+import { QuestSheet, type QuestSheetState } from '../components/QuestSheet'
 import { CountUp } from '../components/CountUp'
-import { Check, IconAlert, IconBolt, IconChevron, IconClose, IconFlame, IconGear, IconMore, IconPlus } from '../components/Icons'
-import { GoalSelect, MinutesPick, StarsPick, fmtMin } from '../components/forms'
+import { Check, IconAlert, IconBolt, IconChevron, IconClose, IconFlame, IconGear, IconMore, IconPlus, IconShield } from '../components/Icons'
+import { GoalSelect, MinutesPick, fmtMin } from '../components/forms'
 import { RankHero } from '../components/RankHero'
 import { Sheet } from '../components/Sheet'
 import { daysBetween, formatDot, localDate } from '../lib/date'
 import { burst, buzz, centerOf, floatText, pulseClass } from '../lib/fx'
 import { MAX_DAILY_QUESTS } from '../lib/defaults'
 import { attackPct, personStatus, startedXp } from '../lib/game'
-import type { ActivityKind, DailyQuest, Stars, WithId } from '../lib/types'
+import type { ActivityKind, DailyQuest, WithId } from '../lib/types'
 import { useCloud } from '../store/cloud'
 import {
-  addQuest, deleteActivity, deleteQuest, editQuest, logActivity, saveReview, setConditionCleared, setRestDay,
+  deleteActivity, logActivity, saveReview, setConditionCleared, setRestDay,
   toggleQuest, toggleStarted, useGame, type Game,
 } from '../store/game'
 import { openPage, useUI } from '../store/ui'
 
 export function Home() {
   const g = useGame()
-  const [questSheet, setQuestSheet] = useState<{ quest?: WithId<DailyQuest> } | null>(null)
+  const [questSheet, setQuestSheet] = useState<QuestSheetState>(null)
   const [timeFor, setTimeFor] = useState<WithId<DailyQuest> | null>(null)
   const [logKind, setLogKind] = useState<ActivityKind | null>(null)
   const [reviewOpen, setReviewOpen] = useState(false)
@@ -62,6 +64,8 @@ export function Home() {
           <div className="l">攻め率</div>
         </div>
       </div>
+
+      <MinLine g={g} onChallenge={() => setChallengeOpen(true)} />
 
       {/* TODAY'S QUESTS */}
       <section className="sec">
@@ -112,15 +116,18 @@ export function Home() {
         <div className={`perfect${g.todayQuests.length === MAX_DAILY_QUESTS && doneCount === MAX_DAILY_QUESTS ? ' got' : ''}`}>
           <b>PERFECT</b> 3つ全クリアでボーナス <span className="x">+{g.config.rules.perfectBonus} XP</span>
         </div>
-        {!g.isRestDay && (
+        {!g.isRestDay && g.mode.penalty > 0 && (g.todayQuests.length === 0 || g.todayQuests.some((q) => !q.done && !q.started)) && (
           <div className="warn-note">
             <IconAlert size={14} />
             {g.todayQuests.length === 0
-              ? `未設定のまま日付が変わると −${g.config.rules.penaltyNoQuest}XP（不戦敗）`
-              : `手をつけていないクエストは、日付が変わると1つにつき −${g.config.rules.penaltyMissedQuest}XP。途中でも「着手」を押せばペナルティなし`}
+              ? `未設定のまま日付が変わると −${g.penalty(g.config.rules.penaltyNoQuest)}XP（不戦敗）`
+              : `手をつけていないクエストは、日付が変わると1つにつき −${g.penalty(g.config.rules.penaltyMissedQuest)}XP。途中でも「着手」を押せばペナルティなし`}
+            {!g.todayActive && g.mode.insurance && g.restsLeft > 0 && '。今週は保険あり：1日なにもできなくても減点なし'}
           </div>
         )}
       </section>
+
+      <Operations g={g} />
 
       {/* ATTACK / DEFENSE */}
       <section className="sec">
@@ -201,7 +208,7 @@ export function Home() {
               休息日にする（今週あと{g.restsLeft}回）
             </button>
           ) : (
-            <span>今週の休息日は使い切りました</span>
+            <span>今週の休息日・保険は使い切りました</span>
           )}
         </div>
       )}
@@ -231,6 +238,45 @@ function ratioMessage(atk: number, def: number, target: number) {
   const needAtk = Math.ceil((target * (atk + def) - 100 * atk) / (100 - target))
   if (needAtk <= 0) return '攻め率は目標クリア。この調子で攻め続けろ。'
   return `目標まで、攻めをあと ${fmtMin(Math.ceil(needAtk / 15) * 15)}（守りの業務はXPがほぼ入らない）`
+}
+
+/** 続けるための最低ライン：1つ着手 or 挑戦1回で連続キープ */
+function MinLine({ g, onChallenge }: { g: Game; onChallenge: () => void }) {
+  if (g.isRestDay) return null
+  const state = g.todayActive ? 'ok' : g.comebackReady ? 'comeback' : 'need'
+  const shields = g.mode.insurance ? g.restsLeft : null
+  const text =
+    state === 'ok' ? `今日の最低ラインはクリア。連続${g.streak}日`
+      : state === 'comeback' ? `1つ「着手」か挑戦1回で COMEBACK +${g.config.rules.comebackBonus}XP`
+        : g.streak > 0 ? `あと1つで連続${g.streak + 1}日。クエストに「着手」か挑戦を1回`
+          : 'クエストに「着手」か挑戦を1回で、連続スタート'
+  return (
+    <div className={`minline ${state}`}>
+      <div className="ml-streak" aria-label={`連続${g.streak}日`}>
+        <IconFlame size={16} /><b>{g.streak}</b><small>日</small>
+      </div>
+      <div className="ml-body">
+        <div className="ml-k">
+          {state === 'ok' ? 'MIN LINE CLEAR' : state === 'comeback' ? 'WELCOME BACK' : 'MIN LINE'}
+          <span className="ml-mode">{g.mode.name}</span>
+        </div>
+        <div className="ml-t">{text}</div>
+      </div>
+      {state !== 'ok' ? (
+        <button className="ml-go" onClick={onChallenge}><IconBolt size={14} />挑戦</button>
+      ) : shields !== null ? (
+        <div className={`ml-shield${shields ? '' : ' empty'}`} title="何もできなかった日は、週の休息日の枠で自動的に休息日になる">
+          <IconShield size={15} /><b>{shields}</b>
+        </div>
+      ) : null}
+      {state !== 'ok' && shields !== null && (
+        <div className="ml-foot">
+          <IconShield size={12} />
+          {shields > 0 ? `保険 ×${shields}：今週はあと${shields}日、なにもできなくても自動で休息日になり連続は切れない` : '今週の保険は使い切った。今日は1つだけでもやろう'}
+        </div>
+      )}
+    </div>
+  )
 }
 
 /** 「何のために頑張るのか」を毎日目に入れる */
@@ -330,7 +376,10 @@ function QuestCard({ q, slot, goalTitle, startedXp, onToggle, onStart, onMore }:
           )}
         </span>
         <span className="q-body">
-          <span className="obj-state">OBJ {letter} ・ {state}</span>
+          <span className="obj-state">
+            OBJ {letter} ・ {state}
+            {q.kind === 'challenge' && <span className="kind-tag">挑戦</span>}
+          </span>
           <span className="q-title">{q.title}</span>
           {goalTitle && <span className="q-link"><i>◆</i>{goalTitle}</span>}
         </span>
@@ -438,61 +487,6 @@ function SquadLineup({ g }: { g: Game }) {
 
 // ---------- sheets ----------
 
-function QuestSheet({ g, state, onClose }: { g: Game; state: { quest?: WithId<DailyQuest> } | null; onClose: () => void }) {
-  const editing = state?.quest
-  const [title, setTitle] = useState('')
-  const [stars, setStars] = useState<Stars>(2)
-  const [goalId, setGoalId] = useState('')
-  const [lastKey, setLastKey] = useState<string | null>(null)
-
-  const key = state ? editing?.id ?? 'new' : null
-  if (key !== lastKey) {
-    setLastKey(key)
-    setTitle(editing?.title ?? '')
-    setStars(editing?.stars ?? 2)
-    setGoalId(editing?.goalId ?? '')
-  }
-
-  const submit = () => {
-    if (!title.trim()) return
-    if (editing) editQuest(editing.id, { title, stars, goalId })
-    else addQuest({ title, stars, goalId })
-    onClose()
-  }
-
-  return (
-    <Sheet open={!!state} onClose={onClose} en={editing ? 'EDIT QUEST' : 'NEW QUEST'} ja={editing ? 'クエストを編集' : '今日のクエスト'}>
-      <div className="field">
-        <label>目標に効く行動</label>
-        <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="例：新規の代理店2社にアポ打診" autoFocus={!editing} />
-      </div>
-      <div className="field">
-        <label>難易度</label>
-        <StarsPick value={stars} onChange={setStars} rules={g.config.rules} />
-      </div>
-      <div className="field">
-        <label>どの目標に効く？</label>
-        <GoalSelect goals={g.goals} value={goalId} onChange={setGoalId} />
-        {g.goals.length === 0 && <div className="help">クエストタブで大目標を登録すると、ここで紐づけられます。</div>}
-      </div>
-      <button className="btn" disabled={!title.trim()} onClick={submit}>{editing ? '保存する' : 'クエストを受注'}</button>
-      {editing && (
-        <button
-          className="btn danger"
-          style={{ marginTop: 8 }}
-          onClick={() => {
-            if (confirm('このクエストを削除しますか？')) {
-              deleteQuest(editing.id)
-              onClose()
-            }
-          }}
-        >
-          削除する
-        </button>
-      )}
-    </Sheet>
-  )
-}
 
 function TimeSheet({ quest, onClose }: { quest: WithId<DailyQuest> | null; onClose: () => void }) {
   return (
@@ -608,6 +602,7 @@ export function ReviewSheet({ g, open, onClose, date }: { g: Game; open: boolean
   return (
     <Sheet open={open} onClose={onClose} en="DEBRIEF" ja={target === g.today ? '今日の振り返り' : `${target} の振り返り`}>
       {target === g.today && <UnfinishedQuests g={g} />}
+      {target === g.today && <NextRoundPlanner g={g} />}
       <div className="field">
         <label>今日を一言で</label>
         <textarea className="input" value={comment} onChange={(e) => setComment(e.target.value)} placeholder="例：アポは取れた。計画書は逃げた。明日は朝イチでやる。" />

@@ -85,6 +85,7 @@ function PromotedCut({ g, from, onClose }: { g: Game; from: string; onClose: () 
 
 function DemotedCut({ g, from, onClose }: { g: Game; from: string; onClose: () => void }) {
   const r = g.rank
+  const hard = g.config.mode === 'ranked'
   useEffect(() => buzz([140, 80, 140]), [])
   const penalties = g.entries.filter((e) => e.kind === 'penalty').slice(-3).reverse()
   return (
@@ -97,7 +98,9 @@ function DemotedCut({ g, from, onClose }: { g: Game; from: string; onClose: () =
       </div>
       <div className="cut-rank solid glitch" data-text={r.fullName}>{r.fullName}</div>
       <div className="cut-from"><span>{from}</span><b>▼</b><span>{r.fullName}</span></div>
-      <p className="cut-text">サボった分はランクに出る。今日の行動で取り返せ。</p>
+      <p className="cut-text">
+        {hard ? 'サボった分はランクに出る。今日の行動で取り返せ。' : '落ちても終わりじゃない。1つ着手すれば、ここからまた積み上がる。'}
+      </p>
       {penalties.length > 0 && (
         <div className="cut-list">
           {penalties.map((p, i) => (
@@ -105,7 +108,7 @@ function DemotedCut({ g, from, onClose }: { g: Game; from: string; onClose: () =
           ))}
         </div>
       )}
-      <button className="btn danger cut-btn">取り返しに行く</button>
+      <button className="btn danger cut-btn">{hard ? '取り返しに行く' : 'まず1つだけやる'}</button>
     </div>
   )
 }
@@ -152,6 +155,9 @@ function ResultView({ g, onClose }: { g: Game; onClose: () => void }) {
     ['クエスト', <>{done}<small>/{set}</small>{started > 0 && <small className="tag-started">着手{started}</small>}</>],
     ['攻め率', pct === null ? '--' : <><CountUp key="pct" value={pct} from={0} delay={760} />%</>],
     ['今日の挑戦', <><CountUp key="ch" value={g.challenges.today} from={0} delay={880} /><small>回 ・ 昨日 {g.challenges.yesterday}</small></>],
+    ['明日の作戦', g.tomorrowQuests.length
+      ? <>{g.tomorrowQuests.length}<small>/3 ・ 作成済み</small></>
+      : <small className="tag-none">まだ書いていない</small>],
   ]
 
   return (

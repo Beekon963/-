@@ -5,15 +5,18 @@ import {
   activityXp, buildLedger, challengesByDate, computeRank, dayVerdict, peakRank, winRate, goalProgress, childrenMap, personStatus, summarize, weeklyStats,
   type GameData,
 } from './game'
-import type { DailyQuest, Goal, RankDef, WithId } from './types'
+import type { Challenge, DailyQuest, Goal, MatchMode, RankDef, WithId } from './types'
 
 function quest(date: string, done: boolean, xp = 40, id = Math.random().toString(36)): WithId<DailyQuest> {
   return { id, date, title: 'q', stars: 2, xp, done, createdAt: 0 }
 }
 
+/** 基本のテストは減点そのまま（RANKED）・COMEBACK なしで確かめる */
+const RANKED = { ...DEFAULT_CONFIG, mode: 'ranked' as MatchMode, rules: { ...DEFAULT_CONFIG.rules, comebackBonus: 0 } }
+
 function game(partial: Partial<GameData>): GameData {
   return {
-    config: DEFAULT_CONFIG,
+    config: RANKED,
     startDate: '2026-10-01',
     today: '2026-10-01',
     quests: [], activities: [], goals: [], contacts: [], reviews: [], challenges: [],
@@ -257,5 +260,148 @@ describe('verdict', () => {
     expect(dayVerdict([], 1, false)).toBe('NICE TRY')
     expect(dayVerdict([], 0, true)).toBe('REST')
     expect(dayVerdict([quest(d, false)], 0, false)).toBe('DEFEAT')
+  })
+})
+
+describe('planning ahead', () => {
+  const at = (y: number, m: number, d: number) => new Date(y, m - 1, d, 12).getTime()
+  const planned = (date: string, createdAt: number) => ({ ...quest(date, false), createdAt })
+  const planPenalties = (g: GameData) =>
+    buildLedger(g).entries.filter((e) => e.kind === 'penalty' && e.label.includes('書かなかった')).map((e) => [e.date, e.amount, e.label])
+  const dailyPlan = (g: GameData) => planPenalties(g).filter((p) => String(p[2]).includes('明日'))
+
+  it('charges when tomorrow was not written by the end of the day', () => {
+    const g = game({
+      startDate: '2026-10-01', today: '2026-10-05', planSince: '2026-10-01',
+      quests: [planned('2026-10-03', at(2026, 10, 2)), planned('2026-10-04', at(2026, 10, 4))],
+    })
+    // 10/01 は開始日、10/02 は書けている、10/03 は当日に書いたので遅い、10/04 は未記入、10/05 は今日
+    expect(dailyPlan(g)).toEqual([
+      ['2026-10-03', -30, '明日のクエストを書かなかった'],
+      ['2026-10-04', -30, '明日のクエストを書かなかった'],
+    ])
+  })
+
+  it('never charges before the rule started', () => {
+    expect(planPenalties(game({ startDate: '2026-10-01', today: '2026-10-05' }))).toEqual([])
+    expect(dailyPlan(game({ startDate: '2026-10-01', today: '2026-10-05', planSince: '2026-10-04' }))).toEqual([
+      ['2026-10-04', -30, '明日のクエストを書かなかった'],
+    ])
+  })
+
+  it('requires next week goals by Sunday and next month goals by the last day', () => {
+    const base = { startDate: '2026-10-05', today: '2026-10-13', planSince: '2026-10-05' }
+    const weekPenalty = (g: GameData) => planPenalties(g).filter((p) => String(p[2]).includes('来週'))
+    expect(weekPenalty(game(base))).toEqual([['2026-10-11', -100, '来週の目標を書かなかった']])
+    const goal = { id: 'w', period: 'week' as const, start: '2026-10-12', title: 'w', done: false, xp: 100, createdAt: at(2026, 10, 11) }
+    expect(weekPenalty(game({ ...base, periodGoals: [goal] }))).toEqual([])
+
+    const month = planPenalties(game({ startDate: '2026-10-29', today: '2026-11-02', planSince: '2026-10-29' }))
+    expect(month.filter((p) => String(p[2]).includes('来月'))).toEqual([['2026-10-31', -200, '来月の目標を書かなかった']])
+  })
+
+  it('pays for achieved week and month goals', () => {
+    const g = game({
+      today: '2026-10-03',
+      periodGoals: [
+        { id: 'w', period: 'week', start: '2026-09-28', title: '新規3社', done: true, doneDate: '2026-10-02', xp: 100, createdAt: 0 },
+        { id: 'm', period: 'month', start: '2026-10-01', title: '月商', done: false, xp: 300, createdAt: 0 },
+      ],
+    })
+    expect(buildLedger(g).entries.filter((e) => e.kind === 'pgoal').map((e) => [e.date, e.amount])).toEqual([['2026-10-02', 100]])
+  })
+})
+
+function log(date: string): WithId<Challenge> {
+  return { id: Math.random().toString(36), date, title: 'c', result: 'success', post: 'none', xp: 20, createdAt: 0 }
+}
+
+function withMode(mode: MatchMode) {
+  return { ...DEFAULT_CONFIG, mode }
+}
+
+describe('match modes', () => {
+  // 10/01 = 開始日、10/02 = 未達2つ、10/03 = 何もしない（未設定）
+  const base = {
+    startDate: '2026-10-01', today: '2026-10-04',
+    quests: [quest('2026-10-01', true), quest('2026-10-02', false), quest('2026-10-02', false)],
+  }
+  const penalties = (mode: MatchMode) =>
+    buildLedger(game({ ...base, config: withMode(mode) })).entries
+      .filter((e) => e.kind === 'penalty').map((e) => [e.date, e.amount])
+
+  it('defaults to STANDARD', () => {
+    expect(DEFAULT_CONFIG.mode).toBe('standard')
+  })
+
+  it('RANKED keeps full penalties and has no insurance', () => {
+    expect(penalties('ranked')).toEqual([['2026-10-02', -30], ['2026-10-03', -50]])
+  })
+
+  it('STANDARD halves penalties and turns one empty day a week into a rest day', () => {
+    const { entries, autoRests } = buildLedger(game({ ...base, config: withMode('standard') }))
+    // 最低ラインを越えなかった最初の日（10/02）に保険が使われ、10/03 は半分の −25
+    expect([...autoRests]).toEqual(['2026-10-02'])
+    expect(entries.filter((e) => e.kind === 'penalty').map((e) => [e.date, e.amount])).toEqual([['2026-10-03', -25]])
+  })
+
+  it('CASUAL never takes XP away', () => {
+    expect(penalties('casual')).toEqual([])
+  })
+
+  it('caps the penalties of one day in STANDARD', () => {
+    // 10/04 は日曜：明日のクエスト・来週の目標・デイリー未設定が重なる
+    const { entries } = buildLedger(game({
+      startDate: '2026-10-01', today: '2026-10-06', planSince: '2026-10-01', config: withMode('standard'),
+      rests: new Set(['2026-10-02']),
+      quests: [quest('2026-10-03', true), quest('2026-10-05', true)],
+    }))
+    const day = entries.filter((e) => e.kind === 'penalty' && e.date === '2026-10-04')
+    expect(day.reduce((s, e) => s + e.amount, 0)).toBe(-50)
+  })
+
+  it('keeps the streak through an insured day', () => {
+    const quests = [quest('2026-10-01', true), quest('2026-10-02', true), quest('2026-10-04', true)]
+    expect(buildLedger(game({ today: '2026-10-05', quests, config: withMode('standard') })).streak).toBe(3)
+    expect(buildLedger(game({ today: '2026-10-05', quests, config: withMode('ranked') })).streak).toBe(1)
+  })
+
+  it('uses the weekly rest quota only once', () => {
+    // 10/05(月)〜：10/06 と 10/07 に何もしない → 保険は10/06だけ
+    const quests = [quest('2026-10-05', true), quest('2026-10-08', true)]
+    const { autoRests, streak } = buildLedger(game({ startDate: '2026-10-05', today: '2026-10-09', quests, config: withMode('standard') }))
+    expect([...autoRests]).toEqual(['2026-10-06'])
+    expect(streak).toBe(1)
+  })
+
+  it('does not insure a week whose rest day was already taken', () => {
+    const quests = [quest('2026-10-05', true), quest('2026-10-08', true)]
+    const { autoRests } = buildLedger(game({
+      startDate: '2026-10-05', today: '2026-10-09', quests, config: withMode('standard'), rests: new Set(['2026-10-07']),
+    }))
+    expect([...autoRests]).toEqual([])
+  })
+
+  it('counts a challenge log as the minimum line for the streak', () => {
+    const quests = [quest('2026-10-01', true), quest('2026-10-03', true)]
+    const g = game({ today: '2026-10-04', quests, challenges: [log('2026-10-02')] })
+    expect(buildLedger(g).streak).toBe(3)
+  })
+})
+
+describe('comeback', () => {
+  it('pays a bonus on the first active day after the streak broke, at most once a week', () => {
+    // RANKED（保険なし）：10/02 休み → 10/03 COMEBACK、10/04 休み → 10/05 は7日以内なのでなし
+    const quests = ['2026-10-01', '2026-10-03', '2026-10-05'].map((d) => quest(d, true))
+    const { entries } = buildLedger(game({ today: '2026-10-06', quests, config: withMode('ranked') }))
+    expect(entries.filter((e) => e.kind === 'comeback').map((e) => [e.date, e.amount])).toEqual([['2026-10-03', 30]])
+  })
+
+  it('is ready today when the streak broke and nothing was done yet', () => {
+    const quests = [quest('2026-10-01', true)]
+    expect(buildLedger(game({ today: '2026-10-03', quests, config: withMode('ranked') })).comebackReady).toBe(true)
+    expect(buildLedger(game({ today: '2026-10-02', quests, config: withMode('ranked') })).comebackReady).toBe(false)
+    // STANDARD なら 10/02 は保険で休息日 → 連続は切れていない
+    expect(buildLedger(game({ today: '2026-10-03', quests, config: withMode('standard') })).comebackReady).toBe(false)
   })
 })

@@ -46,6 +46,33 @@ export interface XpRules {
   challenge: number
   /** 挑戦を発信した */
   post: number
+  /** 前日までに明日のクエストを書かなかった */
+  penaltyNoPlan: number
+  /** 前の週のうちに今週の目標を書かなかった */
+  penaltyNoWeekPlan: number
+  /** 前の月のうちに今月の目標を書かなかった */
+  penaltyNoMonthPlan: number
+  /** 週の目標1つ達成 */
+  weekGoal: number
+  /** 月の目標1つ達成 */
+  monthGoal: number
+  /** 連続が途切れたあと、戻ってきた日のボーナス（7日に1回まで） */
+  comebackBonus: number
+}
+
+/** 試合モード：減点の重さ */
+export type MatchMode = 'casual' | 'standard' | 'ranked'
+
+/** 通知の時刻（'HH:MM'。空文字＝なし） */
+export interface Reminders {
+  /** 毎朝：今日のクエストを確認 */
+  morning: string
+  /** 毎晩：振り返り＋明日のクエスト */
+  night: string
+  /** 日曜：来週の目標 */
+  weekly: string
+  /** 月末：来月の目標 */
+  monthly: string
 }
 
 export interface Config {
@@ -54,11 +81,15 @@ export interface Config {
   /** この時刻より前は前日扱い */
   dayStartHour: number
   attackTargetPct: number
+  mode: MatchMode
+  reminders: Reminders
 }
 
 export interface Profile {
   /** 降格ペナルティの計算を始める日 */
   startDate: string
+  /** 「前日までに書く」ルールを始める日（過去にさかのぼって減点しないため） */
+  planSince?: string
 }
 
 export interface Goal {
@@ -82,8 +113,12 @@ export interface DailyQuest {
   done: boolean
   /** 着手した（途中まで）。XPは一部、ペナルティなし */
   started?: boolean
+  /** タスク（やること）か挑戦（やったことのないこと）か */
+  kind?: QuestKind
   createdAt: number
 }
+
+export type QuestKind = 'task' | 'challenge'
 
 export interface Activity {
   date: string
@@ -143,6 +178,21 @@ export interface Challenge {
   createdAt: number
 }
 
+export type PeriodKind = 'week' | 'month'
+
+/** 週・月の目標（期間の初日 start で区切る） */
+export interface PeriodGoal {
+  period: PeriodKind
+  /** 週は月曜日、月は1日 */
+  start: string
+  title: string
+  goalId?: string
+  done: boolean
+  doneDate?: string
+  xp: number
+  createdAt: number
+}
+
 export interface RestDay {
   date: string
 }
@@ -185,6 +235,7 @@ export interface RecordMap {
   rest: RestDay
   vision: Vision
   challenge: Challenge
+  pgoal: PeriodGoal
 }
 
 export type RecType = keyof RecordMap
