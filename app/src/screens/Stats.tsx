@@ -121,7 +121,9 @@ export function Stats() {
               {list.map((e, i) => (
                 <div key={i} className="log-entry">
                   <span>{e.label}</span>
-                  <span className={e.amount < 0 ? 'n' : 'p'}>{e.amount >= 0 ? '+' : ''}{e.amount}</span>
+                  {e.kind === 'insurance'
+                    ? <span className="s">SHIELD</span>
+                    : <span className={e.amount < 0 ? 'n' : 'p'}>{e.amount >= 0 ? '+' : ''}{e.amount}</span>}
                 </div>
               ))}
             </div>

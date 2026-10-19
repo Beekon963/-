@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { formatShort } from '../lib/date'
 import { MAX_DAILY_QUESTS } from '../lib/defaults'
-import { addQuest, type Game } from '../store/game'
+import { addQuest, penaltyNote, recentQuests, type Game } from '../store/game'
 import { openQuests, type QuestView } from '../store/ui'
 import { IconPlus } from './Icons'
 
@@ -32,28 +32,26 @@ export function Operations({ g }: { g: Game }) {
     {
       view: 'tomorrow', en: 'NEXT ROUND', ja: '明日のクエスト',
       value: `${tomorrowCount}/${MAX_DAILY_QUESTS}`,
-      note: tomorrowCount > 0
-        ? '前日までに作戦を立てた'
-        : plan.enforced ? `今日中に1つ以上書かないと −${rules.penaltyNoPlan}XP` : '前日までに書く（減点は明日から）',
-      tone: tomorrowCount > 0 ? 'ok' : plan.enforced ? 'hot' : 'warn',
+      note: tomorrowCount > 0 ? '前日までに作戦を立てた' : `今日中に1つ以上（${penaltyNote(g, rules.penaltyNoPlan)}）`,
+      tone: tomorrowCount > 0 ? 'ok' : plan.penalized ? 'hot' : 'warn',
     },
     {
       view: 'week', en: `WEEK ${formatShort(week.start)}〜`, ja: '今週の目標',
       value: `${weekDone}/${week.goals.length}`,
       progress: week.goals.length ? weekDone / week.goals.length : 0,
       note: plan.weekDue
-        ? week.nextGoals.length ? '来週の目標も書けている' : `来週の目標を今日中に（−${rules.penaltyNoWeekPlan}XP）`
+        ? week.nextGoals.length ? '来週の目標も書けている' : `来週の目標を今日中に（${penaltyNote(g, rules.penaltyNoWeekPlan)}）`
         : week.goals.length === 0 ? '今週の目標が未設定' : `来週の目標は日曜までに（${week.nextGoals.length}/3）`,
-      tone: plan.weekDue && !week.nextGoals.length ? (plan.enforced ? 'hot' : 'warn') : week.goals.length === 0 ? 'warn' : 'idle',
+      tone: plan.weekDue && !week.nextGoals.length ? (plan.penalized ? 'hot' : 'warn') : week.goals.length === 0 ? 'warn' : 'idle',
     },
     {
       view: 'month', en: `MONTH ${monthNum}月`, ja: '今月の目標',
       value: `${monthDone}/${month.goals.length}`,
       progress: month.goals.length ? monthDone / month.goals.length : 0,
       note: plan.monthDue
-        ? month.nextGoals.length ? '来月の目標も書けている' : `来月の目標を今日中に（−${rules.penaltyNoMonthPlan}XP）`
+        ? month.nextGoals.length ? '来月の目標も書けている' : `来月の目標を今日中に（${penaltyNote(g, rules.penaltyNoMonthPlan)}）`
         : month.goals.length === 0 ? '今月の目標が未設定' : `来月の目標は月末までに（${month.nextGoals.length}/3）`,
-      tone: plan.monthDue && !month.nextGoals.length ? (plan.enforced ? 'hot' : 'warn') : month.goals.length === 0 ? 'warn' : 'idle',
+      tone: plan.monthDue && !month.nextGoals.length ? (plan.penalized ? 'hot' : 'warn') : month.goals.length === 0 ? 'warn' : 'idle',
     },
   ]
 
@@ -93,6 +91,7 @@ export function NextRoundPlanner({ g }: { g: Game }) {
   const [title, setTitle] = useState('')
   const list = g.tomorrowQuests
   const full = list.length >= MAX_DAILY_QUESTS
+  const recent = full ? [] : recentQuests(g, g.tomorrow, 4)
   const add = () => {
     if (!title.trim()) return
     addQuest({ title, stars: 2, date: g.tomorrow })
@@ -102,7 +101,7 @@ export function NextRoundPlanner({ g }: { g: Game }) {
     <div className="field next-round">
       <label>
         NEXT ROUND ・ 明日のクエスト {list.length}/{MAX_DAILY_QUESTS}
-        {list.length === 0 && g.plan.enforced && <b> （書かないと −{g.config.rules.penaltyNoPlan}XP）</b>}
+        {list.length === 0 && g.plan.penalized && <b> （書かないと −{g.penalty(g.config.rules.penaltyNoPlan)}XP）</b>}
       </label>
       {list.map((q, i) => (
         <div key={q.id} className="nr-item">
@@ -122,7 +121,21 @@ export function NextRoundPlanner({ g }: { g: Game }) {
           </button>
         </div>
       )}
-      <p className="help">難易度や目標との紐づけは、クエストタブの「明日」で変えられます。</p>
+      {recent.length > 0 && (
+        <div className="scroll-x" style={{ marginTop: 8 }}>
+          <div className="chips">
+            {recent.map((q) => (
+              <button
+                key={q.id} className="chip"
+                onClick={() => addQuest({ title: q.title, stars: q.stars, goalId: q.goalId, kind: q.kind, date: g.tomorrow })}
+              >
+                <IconPlus size={11} /> {q.title}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      <p className="help">最近のクエストはタップで追加。難易度や目標との紐づけは、クエストタブの「明日」で変えられます。</p>
     </div>
   )
 }

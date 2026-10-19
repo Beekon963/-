@@ -1,4 +1,4 @@
-import type { Config, RankDef, XpRules } from './types'
+import type { Config, MatchMode, RankDef, Reminders, XpRules } from './types'
 
 export const MAX_DAILY_QUESTS = 3
 export const MAX_PERIOD_GOALS = 3
@@ -24,6 +24,43 @@ export const DEFAULT_RULES: XpRules = {
   penaltyNoMonthPlan: 200,
   weekGoal: 100,
   monthGoal: 300,
+  comebackBonus: 30,
+}
+
+export interface ModeDef {
+  name: string
+  ja: string
+  /** 減点にかける倍率 */
+  penalty: number
+  /** 1日に減る XP の上限（null = 上限なし） */
+  cap: number | null
+  /** 何もできなかった日を、週の休息日の枠で自動的に休息日にする */
+  insurance: boolean
+  desc: string
+}
+
+export const MODES: Record<MatchMode, ModeDef> = {
+  casual: {
+    name: 'CASUAL', ja: 'カジュアル', penalty: 0, cap: 0, insurance: true,
+    desc: '減点なし。まずは毎日アプリを開く習慣から',
+  },
+  standard: {
+    name: 'STANDARD', ja: 'スタンダード', penalty: 0.5, cap: 50, insurance: true,
+    desc: '減点は半分・1日最大−50。何もできない日は週1回まで自動で休息日（保険）',
+  },
+  ranked: {
+    name: 'RANKED', ja: 'ランクマッチ', penalty: 1, cap: null, insurance: false,
+    desc: '減点そのまま・保険なし。続けられるようになってから',
+  },
+}
+
+export const MODE_ORDER: MatchMode[] = ['casual', 'standard', 'ranked']
+
+export const DEFAULT_REMINDERS: Reminders = {
+  morning: '07:30',
+  night: '22:00',
+  weekly: '21:00',
+  monthly: '21:00',
 }
 
 export const DEFAULT_RANKS: RankDef[] = [
@@ -57,6 +94,8 @@ export const DEFAULT_CONFIG: Config = {
   rules: DEFAULT_RULES,
   dayStartHour: 4,
   attackTargetPct: 50,
+  mode: 'standard',
+  reminders: DEFAULT_REMINDERS,
 }
 
 export const PERSON_CATEGORIES = ['社員', '取引先', '仲間', '家族', 'その他'] as const

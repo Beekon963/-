@@ -56,6 +56,23 @@ export interface XpRules {
   weekGoal: number
   /** 月の目標1つ達成 */
   monthGoal: number
+  /** 連続が途切れたあと、戻ってきた日のボーナス（7日に1回まで） */
+  comebackBonus: number
+}
+
+/** 試合モード：減点の重さ */
+export type MatchMode = 'casual' | 'standard' | 'ranked'
+
+/** 通知の時刻（'HH:MM'。空文字＝なし） */
+export interface Reminders {
+  /** 毎朝：今日のクエストを確認 */
+  morning: string
+  /** 毎晩：振り返り＋明日のクエスト */
+  night: string
+  /** 日曜：来週の目標 */
+  weekly: string
+  /** 月末：来月の目標 */
+  monthly: string
 }
 
 export interface Config {
@@ -64,6 +81,8 @@ export interface Config {
   /** この時刻より前は前日扱い */
   dayStartHour: number
   attackTargetPct: number
+  mode: MatchMode
+  reminders: Reminders
 }
 
 export interface Profile {

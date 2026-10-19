@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { addDays, daysBetween, logicalToday, monthStart, nextMonthStart, weekStart, weekday } from '../lib/date'
-import { DEFAULT_CONFIG, MAX_DAILY_QUESTS, MAX_PERIOD_GOALS } from '../lib/defaults'
-import { activityXp, buildLedger, challengesByDate, computeRank, dayStat, peakRank, startedXp, summarize, untouched, winRate } from '../lib/game'
+import { DEFAULT_CONFIG, MAX_DAILY_QUESTS, MAX_PERIOD_GOALS, MODES } from '../lib/defaults'
+import { activityXp, buildLedger, challengesByDate, computeRank, dayStat, peakRank, penaltyFor, startedXp, summarize, untouched, winRate } from '../lib/game'
 import type {
   Activity, ActivityKind, Challenge, ChallengeResult, Config, Contact, ContactMethod, DailyQuest, Goal, GoalLevel, PeriodGoal,
   PeriodKind, Person, PostStatus, QuestKind, Rec, RecordMap, RecType, Review, Stars, Vision, WithId,
@@ -18,6 +18,8 @@ function mergeConfig(saved?: Partial<Config>): Config {
     ...saved,
     rules: { ...DEFAULT_CONFIG.rules, ...saved.rules, goal: { ...DEFAULT_CONFIG.rules.goal, ...saved.rules?.goal } },
     ranks: saved.ranks?.length ? saved.ranks : DEFAULT_CONFIG.ranks,
+    mode: saved.mode ?? DEFAULT_CONFIG.mode,
+    reminders: { ...DEFAULT_CONFIG.reminders, ...saved.reminders },
   }
 }
 
@@ -46,7 +48,7 @@ export function deriveGame(records: Record<string, Rec>, now: Date) {
   const byCreated = <T extends { createdAt: number }>(a: T, b: T) => a.createdAt - b.createdAt
 
   const planSince = profile?.planSince ?? null
-  const { entries, streak, bestStreak } = buildLedger({
+  const { entries, streak, bestStreak, autoRests, comebackReady } = buildLedger({
     config, startDate, today, rests, planSince,
     quests: lists.quest, activities: lists.activity, goals: lists.goal, contacts: lists.contact, reviews: lists.review,
     challenges: lists.challenge, periodGoals: lists.pgoal,
@@ -64,7 +66,11 @@ export function deriveGame(records: Record<string, Rec>, now: Date) {
   for (const n of challengeMap.values()) challengeTotal += n
 
   const ws = weekStart(today)
-  const restsThisWeek = lists.rest.filter((r) => r.date >= ws && r.date <= addDays(ws, 6)).length
+  // 自分で決めた休息日と、保険で自動的に休息日になった日の両方
+  const allRests = new Set([...rests, ...autoRests])
+  const restsThisWeek = [...allRests].filter((d) => d >= ws && d <= addDays(ws, 6)).length
+  const mode = MODES[config.mode] ?? MODES.standard
+  const todayActive = quests.some((q) => q.date === today && !untouched(q)) || lists.challenge.some((c) => c.date === today)
 
   const tomorrow = addDays(today, 1)
   const ms = monthStart(today)
@@ -79,7 +85,7 @@ export function deriveGame(records: Record<string, Rec>, now: Date) {
     vision,
     career: {
       bestStreak,
-      winRate: winRate(quests, rests, startDate, today),
+      winRate: winRate(quests, allRests, startDate, today),
       peak: peakRank(entries, config.ranks),
       days: daysBetween(startDate, today) + 1,
       attackMin: lists.activity.reduce((m, a) => m + (a.kind === 'attack' ? a.minutes : 0), 0),
@@ -96,6 +102,12 @@ export function deriveGame(records: Record<string, Rec>, now: Date) {
     entries,
     total,
     streak,
+    /** 今日、最低ライン（1つ着手 or 挑戦1回）を越えたか */
+    todayActive,
+    comebackReady,
+    mode,
+    /** モードをかけたあとの減点 */
+    penalty: (n: number) => penaltyFor(n, mode),
     rank,
     todayStat,
     todayEntries: entries.filter((e) => e.date === today),
@@ -110,6 +122,8 @@ export function deriveGame(records: Record<string, Rec>, now: Date) {
     },
     plan: {
       enforced,
+      /** 今日の締め切りを逃すと実際に XP が減る */
+      penalized: enforced && mode.penalty > 0,
       /** 今日が来週・来月の目標の締め切り日か */
       weekDue: weekday(today) === 0,
       monthDue: tomorrow.endsWith('-01'),
@@ -117,7 +131,9 @@ export function deriveGame(records: Record<string, Rec>, now: Date) {
     todayActivities: lists.activity.filter((a) => a.date === today).sort(byCreated),
     todayReview: lists.review.find((r) => r.date === today) ?? null,
     isRestDay: rests.has(today),
-    restDates: rests,
+    restDates: allRests,
+    autoRests,
+    /** 今週の休息日の残り（保険があるモードでは、何もできなかった日に自動で使われる） */
     restsLeft: Math.max(0, config.rules.restDaysPerWeek - restsThisWeek),
     quests,
     activities: lists.activity.sort(byCreated),
@@ -131,6 +147,13 @@ export function deriveGame(records: Record<string, Rec>, now: Date) {
 }
 
 export type Game = ReturnType<typeof deriveGame>
+
+/** 計画を書かなかったときの減点の説明。dueToday = 締め切りが今日 */
+export function penaltyNote(g: Game, n: number, dueToday = true) {
+  if (g.mode.penalty === 0) return '減点なし（CASUAL）'
+  if (dueToday && !g.plan.enforced) return '減点は明日から'
+  return `書かないと −${g.penalty(n)}XP`
+}
 
 /** 1日の切り替わりに追従するための「今」 */
 function useNow() {
@@ -218,6 +241,18 @@ export function deleteQuest(id: string) {
   remove(id, ...linked)
 }
 
+/** その日はじめての行動で、連続キープ・連続ボーナス・COMEBACK を知らせる */
+function firstAction(g: Game) {
+  if (g.todayActive) return
+  const n = g.streak + 1
+  const { rules } = g.config
+  setTimeout(() => {
+    if (g.comebackReady) toast(rules.comebackBonus, 'COMEBACK', 'おかえり。ここからまた積み上げる')
+    else if (rules.streakEvery > 0 && n % rules.streakEvery === 0) toast(rules.streakBonus, 'STREAK', `${n}日連続ボーナス`)
+    else toast(0, n > 1 ? 'STREAK' : 'MIN LINE', n > 1 ? `連続${n}日 キープ` : '今日の最低ラインをクリア')
+  }, 700)
+}
+
 /** 戻り値 true = 達成にした */
 export function toggleQuest(q: WithId<DailyQuest>) {
   const g = current()
@@ -229,6 +264,7 @@ export function toggleQuest(q: WithId<DailyQuest>) {
     return false
   }
   patch('quest', q.id, { done: true, started: false })
+  if (q.date === g.today && !q.started) firstAction(g)
   const willBePerfect = g.todayQuests.length >= MAX_DAILY_QUESTS && g.todayQuests.every((x) => x.done || x.id === q.id)
   toast(q.xp, 'QUEST CLEAR', q.title)
   if (willBePerfect) setTimeout(() => toast(g.config.rules.perfectBonus, 'PERFECT', '3つ全クリア'), 450)
@@ -238,9 +274,25 @@ export function toggleQuest(q: WithId<DailyQuest>) {
 /** 着手（途中まで）を切り替える。達成済みには使わない */
 export function toggleStarted(q: WithId<DailyQuest>) {
   if (q.done) return
-  const rules = current().config.rules
+  const g = current()
+  const rules = g.config.rules
   patch('quest', q.id, { started: !q.started })
+  if (!q.started && q.date === g.today) firstAction(g)
   toast(q.started ? -startedXp(q, rules) : startedXp(q, rules), q.started ? 'UNDO' : 'ENGAGED', q.title, 'atk')
+}
+
+/** 最近のクエスト（同じタイトルは新しいほう）。date の日にもうあるものは除く */
+export function recentQuests(g: Game, date: string, limit = 6) {
+  const taken = new Set([...g.quests, ...g.tomorrowQuests].filter((q) => q.date === date).map((q) => q.title))
+  const seen = new Set<string>()
+  const out: WithId<DailyQuest>[] = []
+  for (const q of [...g.quests].sort((a, b) => b.createdAt - a.createdAt)) {
+    if (seen.has(q.title) || taken.has(q.title)) continue
+    seen.add(q.title)
+    out.push(q)
+    if (out.length >= limit) break
+  }
+  return out
 }
 
 export function untouchedToday() {
@@ -416,6 +468,7 @@ export function saveChallenge(id: string | null, input: ChallengeInput) {
     createdAt: prev?.createdAt ?? Date.now(),
   }
   put('challenge', id ?? newId(), challenge)
+  if (!prev && challenge.date === g.today) firstAction(g)
   if (!prev) toast(challenge.xp, input.result === 'fail' ? 'NICE TRY' : 'CHALLENGE', challenge.title, 'atk')
   if (challenge.post === 'posted' && prev?.post !== 'posted') setTimeout(() => toast(challenge.postXp ?? 0, 'POSTED', challenge.title), prev ? 0 : 450)
 }

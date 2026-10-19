@@ -3,7 +3,7 @@ import { ChallengeSheet } from '../components/ChallengeSheet'
 import { NextRoundPlanner, Operations } from '../components/Operations'
 import { QuestSheet, type QuestSheetState } from '../components/QuestSheet'
 import { CountUp } from '../components/CountUp'
-import { Check, IconAlert, IconBolt, IconChevron, IconClose, IconFlame, IconGear, IconMore, IconPlus } from '../components/Icons'
+import { Check, IconAlert, IconBolt, IconChevron, IconClose, IconFlame, IconGear, IconMore, IconPlus, IconShield } from '../components/Icons'
 import { GoalSelect, MinutesPick, fmtMin } from '../components/forms'
 import { RankHero } from '../components/RankHero'
 import { Sheet } from '../components/Sheet'
@@ -65,6 +65,8 @@ export function Home() {
         </div>
       </div>
 
+      <MinLine g={g} onChallenge={() => setChallengeOpen(true)} />
+
       {/* TODAY'S QUESTS */}
       <section className="sec">
         <div className="sec-h">
@@ -114,12 +116,13 @@ export function Home() {
         <div className={`perfect${g.todayQuests.length === MAX_DAILY_QUESTS && doneCount === MAX_DAILY_QUESTS ? ' got' : ''}`}>
           <b>PERFECT</b> 3つ全クリアでボーナス <span className="x">+{g.config.rules.perfectBonus} XP</span>
         </div>
-        {!g.isRestDay && (
+        {!g.isRestDay && g.mode.penalty > 0 && (g.todayQuests.length === 0 || g.todayQuests.some((q) => !q.done && !q.started)) && (
           <div className="warn-note">
             <IconAlert size={14} />
             {g.todayQuests.length === 0
-              ? `未設定のまま日付が変わると −${g.config.rules.penaltyNoQuest}XP（不戦敗）`
-              : `手をつけていないクエストは、日付が変わると1つにつき −${g.config.rules.penaltyMissedQuest}XP。途中でも「着手」を押せばペナルティなし`}
+              ? `未設定のまま日付が変わると −${g.penalty(g.config.rules.penaltyNoQuest)}XP（不戦敗）`
+              : `手をつけていないクエストは、日付が変わると1つにつき −${g.penalty(g.config.rules.penaltyMissedQuest)}XP。途中でも「着手」を押せばペナルティなし`}
+            {!g.todayActive && g.mode.insurance && g.restsLeft > 0 && '。今週は保険あり：1日なにもできなくても減点なし'}
           </div>
         )}
       </section>
@@ -205,7 +208,7 @@ export function Home() {
               休息日にする（今週あと{g.restsLeft}回）
             </button>
           ) : (
-            <span>今週の休息日は使い切りました</span>
+            <span>今週の休息日・保険は使い切りました</span>
           )}
         </div>
       )}
@@ -235,6 +238,45 @@ function ratioMessage(atk: number, def: number, target: number) {
   const needAtk = Math.ceil((target * (atk + def) - 100 * atk) / (100 - target))
   if (needAtk <= 0) return '攻め率は目標クリア。この調子で攻め続けろ。'
   return `目標まで、攻めをあと ${fmtMin(Math.ceil(needAtk / 15) * 15)}（守りの業務はXPがほぼ入らない）`
+}
+
+/** 続けるための最低ライン：1つ着手 or 挑戦1回で連続キープ */
+function MinLine({ g, onChallenge }: { g: Game; onChallenge: () => void }) {
+  if (g.isRestDay) return null
+  const state = g.todayActive ? 'ok' : g.comebackReady ? 'comeback' : 'need'
+  const shields = g.mode.insurance ? g.restsLeft : null
+  const text =
+    state === 'ok' ? `今日の最低ラインはクリア。連続${g.streak}日`
+      : state === 'comeback' ? `1つ「着手」か挑戦1回で COMEBACK +${g.config.rules.comebackBonus}XP`
+        : g.streak > 0 ? `あと1つで連続${g.streak + 1}日。クエストに「着手」か挑戦を1回`
+          : 'クエストに「着手」か挑戦を1回で、連続スタート'
+  return (
+    <div className={`minline ${state}`}>
+      <div className="ml-streak" aria-label={`連続${g.streak}日`}>
+        <IconFlame size={16} /><b>{g.streak}</b><small>日</small>
+      </div>
+      <div className="ml-body">
+        <div className="ml-k">
+          {state === 'ok' ? 'MIN LINE CLEAR' : state === 'comeback' ? 'WELCOME BACK' : 'MIN LINE'}
+          <span className="ml-mode">{g.mode.name}</span>
+        </div>
+        <div className="ml-t">{text}</div>
+      </div>
+      {state !== 'ok' ? (
+        <button className="ml-go" onClick={onChallenge}><IconBolt size={14} />挑戦</button>
+      ) : shields !== null ? (
+        <div className={`ml-shield${shields ? '' : ' empty'}`} title="何もできなかった日は、週の休息日の枠で自動的に休息日になる">
+          <IconShield size={15} /><b>{shields}</b>
+        </div>
+      ) : null}
+      {state !== 'ok' && shields !== null && (
+        <div className="ml-foot">
+          <IconShield size={12} />
+          {shields > 0 ? `保険 ×${shields}：今週はあと${shields}日、なにもできなくても自動で休息日になり連続は切れない` : '今週の保険は使い切った。今日は1つだけでもやろう'}
+        </div>
+      )}
+    </div>
+  )
 }
 
 /** 「何のために頑張るのか」を毎日目に入れる */

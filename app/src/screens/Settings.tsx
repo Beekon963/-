@@ -1,7 +1,9 @@
 import { useRef, useState } from 'react'
-import { IconBack } from '../components/Icons'
+import { IconBack, IconBell } from '../components/Icons'
 import { formatJa } from '../lib/date'
-import type { XpRules } from '../lib/types'
+import { DEFAULT_REMINDERS, MODES, MODE_ORDER } from '../lib/defaults'
+import { REMINDER_DEFS, buildIcs, googleCalendarUrl } from '../lib/reminders'
+import type { Reminders, XpRules } from '../lib/types'
 import { getServerConfig, setLocalMode, signOut, syncNow, useCloud } from '../store/cloud'
 import { exportJson, importJson, useData } from '../store/data'
 import { updateConfig, useGame } from '../store/game'
@@ -28,6 +30,7 @@ const RULE_ROWS: { key: NumKey; label: string }[] = [
   { key: 'penaltyNoPlan', label: '降格：明日のクエストを前日に書かなかった' },
   { key: 'penaltyNoWeekPlan', label: '降格：来週の目標を日曜までに書かなかった' },
   { key: 'penaltyNoMonthPlan', label: '降格：来月の目標を月末までに書かなかった' },
+  { key: 'comebackBonus', label: 'COMEBACK ボーナス（連続が切れたあと戻った日）' },
 ]
 
 export function Settings() {
@@ -53,6 +56,19 @@ export function Settings() {
   const setGoalXp = (k: keyof XpRules['goal'], v: string) => {
     const n = Math.max(0, Math.round(Number(v) || 0))
     updateConfig((c) => ({ ...c, rules: { ...c.rules, goal: { ...c.rules.goal, [k]: n } } }))
+  }
+
+  const setReminder = (key: keyof Reminders, v: string) => {
+    updateConfig((c) => ({ ...c, reminders: { ...c.reminders, [key]: v } }))
+  }
+
+  const downloadIcs = () => {
+    const blob = new Blob([buildIcs(g.config.reminders)], { type: 'text/calendar;charset=utf-8' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = 'life-ranked-reminders.ics'
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000)
   }
 
   const download = () => {
@@ -84,6 +100,65 @@ export function Settings() {
       <div className="page-title">
         <button className="back" onClick={() => useUI.setState({ page: null })} aria-label="戻る"><IconBack /></button>
         <div><h1>SETTINGS</h1><div className="ja">設定</div></div>
+      </div>
+
+      <div className="set-group">
+        <h3>MATCH MODE ・ 試合モード</h3>
+        <div className="mode-pick">
+          {MODE_ORDER.map((m) => {
+            const def = MODES[m]
+            return (
+              <button
+                key={m} className={`mode-card${g.config.mode === m ? ' on' : ''}`} aria-pressed={g.config.mode === m}
+                onClick={() => updateConfig((c) => ({ ...c, mode: m }))}
+              >
+                <span className="mc-name">{def.name}</span>
+                <span className="mc-ja">{def.ja}{m === 'standard' && <small>おすすめ</small>}</span>
+                <span className="mc-desc">{def.desc}</span>
+              </button>
+            )
+          })}
+        </div>
+        <p className="help" style={{ padding: '8px 2px' }}>
+          続けることがいちばん大事。慣れるまでは STANDARD 以下で。変えると過去の減点も計算し直されます。
+        </p>
+      </div>
+
+      <div className="set-group">
+        <h3>REMINDERS ・ 通知</h3>
+        <p className="help" style={{ padding: '2px 2px 6px' }}>
+          アプリを閉じていても届くように、カレンダーの通知を使います。時刻を決めて、カレンダーに追加してください。
+        </p>
+        {REMINDER_DEFS.map((def) => {
+          const time = g.config.reminders[def.key]
+          return (
+            <div key={def.key} className="rem-row">
+              <span className="rt">{def.label}</span>
+              {time ? (
+                <input
+                  className="input" type="time" value={time} aria-label={`${def.label}の時刻`}
+                  onChange={(e) => setReminder(def.key, e.target.value)}
+                />
+              ) : (
+                <button className="gcal" onClick={() => setReminder(def.key, DEFAULT_REMINDERS[def.key])}>オンにする</button>
+              )}
+              <span className="rs">{def.when}{time ? ` ${time}` : ' ・ 通知しない'}</span>
+              {time && (
+                <span className="rl">
+                  <a className="gcal" href={googleCalendarUrl(def, time)} target="_blank" rel="noreferrer">Googleに追加</a>
+                  <button className="gcal off" onClick={() => setReminder(def.key, '')}>OFF</button>
+                </span>
+              )}
+            </div>
+          )
+        })}
+        <div className="rem-actions">
+          <button className="btn" onClick={downloadIcs}><IconBell size={16} /> まとめてカレンダーに追加（.ics）</button>
+        </div>
+        <p className="help" style={{ padding: '8px 2px' }}>
+          .ics は iPhone のカレンダー・Google カレンダー・Outlook で開けます。「Google」は1つずつ Google カレンダーに追加します。
+          時刻を変えたら、前の予定を消してから追加し直してください。
+        </p>
       </div>
 
       <div className="set-group">

@@ -9,7 +9,7 @@ import { burst, centerOf } from '../lib/fx'
 import { childrenMap, goalProgress } from '../lib/game'
 import type { DailyQuest, Goal, GoalLevel, PeriodGoal, PeriodKind, WithId } from '../lib/types'
 import {
-  addGoal, addPeriodGoal, deleteGoal, deletePeriodGoal, editGoal, editPeriodGoal, toggleGoal, togglePeriodGoal, useGame, type Game,
+  addGoal, addPeriodGoal, deleteGoal, deletePeriodGoal, editGoal, editPeriodGoal, penaltyNote, toggleGoal, togglePeriodGoal, useGame, type Game,
 } from '../store/game'
 import { openPage, useUI, type QuestView } from '../store/ui'
 
@@ -64,15 +64,14 @@ function TomorrowView({ g }: { g: Game }) {
   const [sheet, setSheet] = useState<QuestSheetState>(null)
   const list = g.tomorrowQuests
   const { rules } = g.config
-  const tone = list.length ? 'ok' : g.plan.enforced ? 'hot' : 'warn'
+  const tone = list.length ? 'ok' : g.plan.penalized ? 'hot' : 'warn'
   return (
     <div className="sec">
       <div className={`plan-card ${tone}`}>
         <div className="pc-kicker">NEXT ROUND ・ {formatJa(g.tomorrow)}</div>
         <div className="pc-title">{list.length ? '明日の作戦は立っている' : '明日のクエストを書こう'}</div>
         <div className="pc-rule">
-          日付が変わる（朝{g.config.dayStartHour}時）までに1つ以上書く。書かないと −{rules.penaltyNoPlan}XP
-          {!g.plan.enforced && '（減点は明日から）'}
+          日付が変わる（朝{g.config.dayStartHour}時）までに1つ以上書く。{penaltyNote(g, rules.penaltyNoPlan)}
         </div>
       </div>
       {list.map((q, i) => (
@@ -123,7 +122,7 @@ function PeriodView({ g, period }: { g: Game; period: PeriodKind }) {
   const penalty = isWeek ? rules.penaltyNoWeekPlan : rules.penaltyNoMonthPlan
   const xp = isWeek ? rules.weekGoal : rules.monthGoal
   const nextLabel = isWeek ? '来週' : '来月'
-  const nextTone = p.nextGoals.length ? 'ok' : due ? (g.plan.enforced ? 'hot' : 'warn') : 'idle'
+  const nextTone = p.nextGoals.length ? 'ok' : due ? (g.plan.penalized ? 'hot' : 'warn') : 'idle'
 
   return (
     <div className="sec">
@@ -135,8 +134,7 @@ function PeriodView({ g, period }: { g: Game; period: PeriodKind }) {
         <div className="pc-kicker">{isWeek ? 'NEXT WEEK' : 'NEXT MONTH'} ・ 締め切り {formatJa(deadline)}</div>
         <div className="pc-title">{p.nextGoals.length ? `${nextLabel}の目標は書けている` : `${nextLabel}の目標を前日までに`}</div>
         <div className="pc-rule">
-          {formatJa(deadline)}が終わるまでに1つ以上書く。書かないと −{penalty}XP
-          {!g.plan.enforced && due && '（減点は明日から）'}
+          {formatJa(deadline)}が終わるまでに1つ以上書く。{penaltyNote(g, penalty, due)}
         </div>
       </div>
       <PeriodBlock

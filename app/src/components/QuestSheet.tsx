@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { formatJa } from '../lib/date'
 import type { DailyQuest, QuestKind, Stars, WithId } from '../lib/types'
-import { addQuest, deleteQuest, editQuest, type Game } from '../store/game'
+import { addQuest, deleteQuest, editQuest, recentQuests, type Game } from '../store/game'
 import { GoalSelect, StarsPick } from './forms'
 import { Sheet } from './Sheet'
 
@@ -33,6 +33,7 @@ export function QuestSheet({ g, state, onClose }: { g: Game; state: QuestSheetSt
     onClose()
   }
 
+  const recent = editing ? [] : recentQuests(g, date)
   const isToday = date === g.today
   const when = isToday ? '今日' : date === g.tomorrow ? '明日' : formatJa(date)
 
@@ -51,6 +52,25 @@ export function QuestSheet({ g, state, onClose }: { g: Game; state: QuestSheetSt
           className="input" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus={!editing}
           placeholder={kind === 'challenge' ? '例：顔出しでショート動画を1本撮る' : '例：新規の代理店2社にアポ打診'}
         />
+        {recent.length > 0 && (
+          <div className="scroll-x" style={{ marginTop: 8 }}>
+            <div className="chips">
+              {recent.map((q) => (
+                <button
+                  key={q.id} className="chip"
+                  onClick={() => {
+                    setTitle(q.title)
+                    setStars(q.stars)
+                    setGoalId(q.goalId ?? '')
+                    setKind(q.kind ?? 'task')
+                  }}
+                >
+                  {q.title}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       <div className="field">
         <label>難易度</label>
