@@ -31,6 +31,8 @@ const RULE_ROWS: { key: NumKey; label: string }[] = [
   { key: 'penaltyNoWeekPlan', label: '降格：来週の目標を日曜までに書かなかった' },
   { key: 'penaltyNoMonthPlan', label: '降格：来月の目標を月末までに書かなかった' },
   { key: 'comebackBonus', label: 'COMEBACK ボーナス（連続が切れたあと戻った日）' },
+  { key: 'taskKey', label: 'タスク「大切」を完了' },
+  { key: 'taskOther', label: 'タスク「今すぐ・先に・いつか」を完了' },
 ]
 
 export function Settings() {

@@ -58,6 +58,10 @@ export interface XpRules {
   monthGoal: number
   /** 連続が途切れたあと、戻ってきた日のボーナス（7日に1回まで） */
   comebackBonus: number
+  /** 4マスのタスク：「大切」を完了 */
+  taskKey: number
+  /** 4マスのタスク：「今すぐ・先に・いつか」を完了 */
+  taskOther: number
 }
 
 /** 試合モード：減点の重さ */
@@ -193,6 +197,22 @@ export interface PeriodGoal {
   createdAt: number
 }
 
+/** 4マスのタスクの置き場所：今すぐ・大切・先に・いつか */
+export type TaskBox = 'now' | 'key' | 'next' | 'someday'
+
+/** 4マスのタスク（減点なし。完了した翌日にボードから消える） */
+export interface Task {
+  title: string
+  box: TaskBox
+  done: boolean
+  doneDate?: string
+  /** 完了したときのXP */
+  xp: number
+  /** マスの中の並び順 */
+  order: number
+  createdAt: number
+}
+
 export interface RestDay {
   date: string
 }
@@ -236,6 +256,7 @@ export interface RecordMap {
   vision: Vision
   challenge: Challenge
   pgoal: PeriodGoal
+  task: Task
 }
 
 export type RecType = keyof RecordMap

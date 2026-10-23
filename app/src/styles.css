@@ -1022,3 +1022,30 @@ body {
 .rs-back { color:var(--rank); }
 .rs-back b { font-size:18px; margin:0 2px; }
 .log-entry .s { font-family:var(--hud); font-weight:700; letter-spacing:.12em; color:#8fb3da; flex-shrink:0; }
+
+/* ===== task board：4マス（今すぐ・大切・先に・いつか） ===== */
+.tboard { display:grid; grid-template-columns:1fr 1fr; background:var(--panel); border:1px solid var(--line); }
+.tq { min-width:0; padding:8px 10px 10px; min-height:118px; display:flex; flex-direction:column; align-items:stretch;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--c) 7%,transparent),transparent 46px); }
+.tq:nth-child(odd) { border-right:1px dashed var(--line3); }
+.tq:nth-child(-n+2) { border-bottom:1px dashed var(--line3); }
+.tq-h { display:flex; align-items:baseline; gap:6px; width:100%; text-align:left; padding:2px 0 6px; }
+.tq-h .ja { font-size:13px; font-weight:900; color:var(--c); }
+.tq-h .en { font-family:var(--hud); font-weight:700; font-size:9px; letter-spacing:.2em; color:var(--mute); }
+.tq-h .n { margin-left:auto; font-family:var(--hud); font-weight:800; font-size:15px; color:var(--text); }
+.tq-add { align-self:center; width:20px; height:20px; display:grid; place-items:center; border:1px solid var(--line2); color:var(--sub); }
+.titem { display:flex; gap:8px; align-items:flex-start; padding:4px 0; min-width:0; }
+.titem .tc { flex-shrink:0; width:18px; height:18px; margin-top:1px; border-radius:50%; border:1.5px solid var(--line3); display:grid; place-items:center; }
+.titem .tc:active { transform:scale(.88); }
+.titem.done .tc { background:var(--c); border-color:var(--c); }
+.titem .tt { flex:1; min-width:0; text-align:left; font-size:13px; font-weight:700; line-height:1.45;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; }
+.titem.done .tt { color:var(--mute); text-decoration:line-through; font-weight:500; }
+.tq-more { align-self:flex-start; font-size:11px; color:var(--sub); padding:4px 0 0 26px; }
+.tq-empty { flex:1; text-align:left; font-size:11px; color:var(--mute); padding:4px 0; }
+.tb-foot { font-size:10.5px; color:var(--sub); line-height:1.5; margin-top:8px; }
+.tsheet .tlist { margin-top:12px; border-top:1px solid var(--line); padding-top:6px; }
+.tsheet .titem { padding:9px 0; border-bottom:1px solid var(--line); }
+.tsheet .titem .tc { width:22px; height:22px; }
+.tsheet .titem .tt { font-size:14px; -webkit-line-clamp:4; }
+.tbox-pick .chip.on { background:var(--c); border-color:var(--c); color:var(--bg); }
