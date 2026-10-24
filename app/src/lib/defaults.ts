@@ -25,6 +25,8 @@ export const DEFAULT_RULES: XpRules = {
   weekGoal: 100,
   monthGoal: 300,
   comebackBonus: 30,
+  taskKey: 15,
+  taskOther: 5,
 }
 
 export interface ModeDef {
@@ -108,6 +110,13 @@ export const DEFAULT_ALERT_DAYS: Record<(typeof PERSON_CATEGORIES)[number], numb
   家族: 14,
   その他: 60,
 }
+
+export const TASK_BOXES = [
+  { box: 'now', en: 'NOW', ja: '今すぐ' },
+  { box: 'key', en: 'KEY', ja: '大切' },
+  { box: 'next', en: 'NEXT', ja: '先に' },
+  { box: 'someday', en: 'SOMEDAY', ja: 'いつか' },
+] as const
 
 export const CHALLENGE_RESULT_LABEL = { success: '成功', fail: '失敗', ongoing: '途中' } as const
 

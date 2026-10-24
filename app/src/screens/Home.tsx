@@ -6,6 +6,7 @@ import { CountUp } from '../components/CountUp'
 import { Check, IconAlert, IconBolt, IconChevron, IconClose, IconFlame, IconGear, IconMore, IconPlus, IconShield } from '../components/Icons'
 import { GoalSelect, MinutesPick, fmtMin } from '../components/forms'
 import { RankHero } from '../components/RankHero'
+import { TaskBoard } from '../components/TaskBoard'
 import { Sheet } from '../components/Sheet'
 import { daysBetween, formatDot, localDate } from '../lib/date'
 import { burst, buzz, centerOf, floatText, pulseClass } from '../lib/fx'
@@ -127,6 +128,8 @@ export function Home() {
         )}
       </section>
 
+      <TaskBoard g={g} />
+
       <Operations g={g} />
 
       {/* ATTACK / DEFENSE */}
@@ -247,9 +250,9 @@ function MinLine({ g, onChallenge }: { g: Game; onChallenge: () => void }) {
   const shields = g.mode.insurance ? g.restsLeft : null
   const text =
     state === 'ok' ? `今日の最低ラインはクリア。連続${g.streak}日`
-      : state === 'comeback' ? `1つ「着手」か挑戦1回で COMEBACK +${g.config.rules.comebackBonus}XP`
-        : g.streak > 0 ? `あと1つで連続${g.streak + 1}日。クエストに「着手」か挑戦を1回`
-          : 'クエストに「着手」か挑戦を1回で、連続スタート'
+      : state === 'comeback' ? `「着手」・挑戦・大切タスクのどれか1つで COMEBACK +${g.config.rules.comebackBonus}XP`
+        : g.streak > 0 ? `あと1つで連続${g.streak + 1}日。クエストに「着手」・挑戦・大切タスクのどれか`
+          : 'クエストに「着手」・挑戦・大切タスクのどれか1つで、連続スタート'
   return (
     <div className={`minline ${state}`}>
       <div className="ml-streak" aria-label={`連続${g.streak}日`}>

@@ -6,7 +6,7 @@ import { DEFAULT_CONFIG, MAX_DAILY_QUESTS, MAX_PERIOD_GOALS, MODES } from '../li
 import { activityXp, buildLedger, challengesByDate, computeRank, dayStat, peakRank, penaltyFor, startedXp, summarize, untouched, winRate } from '../lib/game'
 import type {
   Activity, ActivityKind, Challenge, ChallengeResult, Config, Contact, ContactMethod, DailyQuest, Goal, GoalLevel, PeriodGoal,
-  PeriodKind, Person, PostStatus, QuestKind, Rec, RecordMap, RecType, Review, Stars, Vision, WithId,
+  PeriodKind, Person, PostStatus, QuestKind, Rec, RecordMap, RecType, Review, Stars, Task, TaskBox, Vision, WithId,
 } from '../lib/types'
 import { newId, patch, put, remove, useData } from './data'
 import { toast } from './ui'
@@ -29,7 +29,7 @@ type Lists = {
 
 function collectLists(records: Record<string, Rec>): Lists {
   const lists: Lists = {
-    config: [], profile: [], goal: [], quest: [], activity: [], person: [], contact: [], review: [], rest: [], vision: [], challenge: [], pgoal: [],
+    config: [], profile: [], goal: [], quest: [], activity: [], person: [], contact: [], review: [], rest: [], vision: [], challenge: [], pgoal: [], task: [],
   }
   for (const r of Object.values(records)) {
     if (r.deleted || !lists[r.type]) continue
@@ -51,7 +51,7 @@ export function deriveGame(records: Record<string, Rec>, now: Date) {
   const { entries, streak, bestStreak, autoRests, comebackReady } = buildLedger({
     config, startDate, today, rests, planSince,
     quests: lists.quest, activities: lists.activity, goals: lists.goal, contacts: lists.contact, reviews: lists.review,
-    challenges: lists.challenge, periodGoals: lists.pgoal,
+    challenges: lists.challenge, periodGoals: lists.pgoal, tasks: lists.task,
   })
   // 明日以降のクエストは「計画」なので、集計には今日までの分だけ使う
   const quests = lists.quest.filter((q) => q.date <= today)
@@ -70,7 +70,19 @@ export function deriveGame(records: Record<string, Rec>, now: Date) {
   const allRests = new Set([...rests, ...autoRests])
   const restsThisWeek = [...allRests].filter((d) => d >= ws && d <= addDays(ws, 6)).length
   const mode = MODES[config.mode] ?? MODES.standard
-  const todayActive = quests.some((q) => q.date === today && !untouched(q)) || lists.challenge.some((c) => c.date === today)
+  const todayActive = quests.some((q) => q.date === today && !untouched(q))
+    || lists.challenge.some((c) => c.date === today)
+    || lists.task.some((t) => t.done && t.box === 'key' && t.doneDate === today)
+
+  // 4マス：まだのタスクと、今日終えたタスク（翌日には消える）
+  const taskBoard: Record<TaskBox, WithId<Task>[]> = { now: [], key: [], next: [], someday: [] }
+  const byOrder = (a: WithId<Task>, b: WithId<Task>) =>
+    Number(a.done) - Number(b.done) || a.order - b.order || a.createdAt - b.createdAt
+  for (const t of lists.task) {
+    if (t.done && t.doneDate !== today) continue
+    taskBoard[t.box]?.push(t)
+  }
+  for (const list of Object.values(taskBoard)) list.sort(byOrder)
 
   const tomorrow = addDays(today, 1)
   const ms = monthStart(today)
@@ -128,6 +140,7 @@ export function deriveGame(records: Record<string, Rec>, now: Date) {
       weekDue: weekday(today) === 0,
       monthDue: tomorrow.endsWith('-01'),
     },
+    taskBoard,
     todayActivities: lists.activity.filter((a) => a.date === today).sort(byCreated),
     todayReview: lists.review.find((r) => r.date === today) ?? null,
     isRestDay: rests.has(today),
@@ -220,12 +233,13 @@ export function addQuest(input: QuestInput) {
   const g = current()
   const date = input.date ?? g.today
   const count = Object.values(useData.getState().records).filter((r) => r.type === 'quest' && !r.deleted && (r.data as DailyQuest).date === date).length
-  if (count >= MAX_DAILY_QUESTS) return
+  if (count >= MAX_DAILY_QUESTS) return false
   const quest: DailyQuest = {
     date, title: input.title.trim(), stars: input.stars, goalId: input.goalId || undefined, kind: input.kind,
     xp: g.config.rules.quest[input.stars - 1], done: false, createdAt: Date.now(),
   }
   put('quest', newId(), quest)
+  return true
 }
 
 export function editQuest(id: string, input: QuestInput) {
@@ -516,4 +530,50 @@ export function togglePeriodGoal(p: WithId<PeriodGoal>) {
 
 export function deletePeriodGoal(id: string) {
   remove(id)
+}
+
+// ---------- 4マスのタスク ----------
+
+function nextOrder(box: TaskBox, skipId?: string) {
+  const tasks = current().taskBoard[box].filter((t) => t.id !== skipId)
+  return tasks.reduce((m, t) => Math.max(m, t.order), 0) + 1
+}
+
+export function addTask(title: string, box: TaskBox) {
+  const task: Task = { title: title.trim(), box, done: false, xp: 0, order: nextOrder(box), createdAt: Date.now() }
+  put('task', newId(), task)
+}
+
+export function editTask(t: WithId<Task>, input: { title: string; box: TaskBox }) {
+  patch('task', t.id, {
+    title: input.title.trim(),
+    box: input.box,
+    ...(input.box !== t.box ? { order: nextOrder(input.box, t.id) } : {}),
+  })
+}
+
+/** 戻り値 true = 完了にした */
+export function toggleTask(t: WithId<Task>) {
+  const g = current()
+  if (t.done) {
+    patch('task', t.id, { done: false, doneDate: undefined, xp: 0 })
+    if (t.xp) toast(-t.xp, 'UNDO', t.title)
+    return false
+  }
+  const xp = t.box === 'key' ? g.config.rules.taskKey : g.config.rules.taskOther
+  patch('task', t.id, { done: true, doneDate: g.today, xp })
+  if (xp) toast(xp, t.box === 'key' ? 'KEY TASK' : 'TASK', t.title, t.box === 'key' ? 'atk' : undefined)
+  if (t.box === 'key') firstAction(g)
+  return true
+}
+
+export function deleteTask(id: string) {
+  remove(id)
+}
+
+/** タスクを今日のクエストに格上げする（タスクは消える） */
+export function taskToQuest(t: WithId<Task>) {
+  if (!addQuest({ title: t.title, stars: 2, kind: 'task' })) return false
+  remove(t.id)
+  return true
 }
