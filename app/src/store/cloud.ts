@@ -37,7 +37,8 @@ export function saveServerConfig(url: string, key: string) {
 
 let client: SupabaseClient | null = null
 
-function getClient() {
+/** ログインと同期に使う Supabase（未設定なら null） */
+export function getClient() {
   if (client) return client
   const cfg = getServerConfig()
   if (!cfg) return null

@@ -8,6 +8,7 @@ import '@fontsource/barlow-condensed/latin-800.css'
 import './styles.css'
 import { App } from './App'
 import { initCloud } from './store/cloud'
+import { startWallpaperSync } from './store/wallpaper'
 import { hydrate } from './store/data'
 
 registerSW({ immediate: true })
@@ -17,7 +18,10 @@ if (import.meta.env.DEV) {
   void import('./store/data').then((m) => Object.assign(window, { __lr: m }))
 }
 
-void hydrate().then(() => initCloud())
+void hydrate().then(() => {
+  void initCloud()
+  startWallpaperSync()
+})
 
 const root = createRoot(document.getElementById('root')!)
 if (import.meta.env.DEV && location.search.includes('emblems')) {

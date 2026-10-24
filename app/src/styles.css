@@ -1049,3 +1049,15 @@ body {
 .tsheet .titem .tc { width:22px; height:22px; }
 .tsheet .titem .tt { font-size:14px; -webkit-line-clamp:4; }
 .tbox-pick .chip.on { background:var(--c); border-color:var(--c); color:var(--bg); }
+
+/* ===== settings：ロック画面の壁紙 ===== */
+.wp-top { display:flex; gap:14px; align-items:flex-start; padding:4px 2px 4px; }
+.wp-thumb { flex-shrink:0; width:96px; aspect-ratio:1179 / 2556; object-fit:cover; border:1px solid var(--line2); background:var(--panel); display:block; }
+.wp-side { display:flex; flex-direction:column; gap:10px; align-items:flex-start; min-width:0; }
+.wp-url { border:1px solid var(--line2); background:var(--panel); padding:10px 12px; margin:10px 0 4px; display:grid; gap:8px; justify-items:start; }
+.wp-url-h { font-size:11px; color:var(--sub); font-weight:700; }
+.wp-url code { font-size:11px; line-height:1.5; word-break:break-all; color:var(--text); font-family:ui-monospace,Menlo,monospace; }
+.wp-url code b { color:var(--rank); }
+.wp-steps { margin:10px 0 4px; padding-left:20px; display:grid; gap:7px; font-size:12px; line-height:1.6; color:var(--text); }
+.wp-steps code { font-family:ui-monospace,Menlo,monospace; font-size:11px; color:var(--rank); background:var(--panel2); padding:1px 4px; }
+.wp-actions { display:flex; flex-wrap:wrap; gap:6px; }

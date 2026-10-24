@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { IconBack, IconBell } from '../components/Icons'
+import { LockScreenSettings } from '../components/LockScreen'
 import { formatJa } from '../lib/date'
 import { DEFAULT_REMINDERS, MODES, MODE_ORDER } from '../lib/defaults'
 import { REMINDER_DEFS, buildIcs, googleCalendarUrl } from '../lib/reminders'
@@ -162,6 +163,8 @@ export function Settings() {
           時刻を変えたら、前の予定を消してから追加し直してください。
         </p>
       </div>
+
+      <LockScreenSettings g={g} />
 
       <div className="set-group">
         <h3>ACCOUNT</h3>

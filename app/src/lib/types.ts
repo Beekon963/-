@@ -87,6 +87,16 @@ export interface Config {
   attackTargetPct: number
   mode: MatchMode
   reminders: Reminders
+  /** ロック画面の壁紙の自動更新（オンのときだけ） */
+  wallpaper?: WallpaperConfig
+}
+
+export interface WallpaperConfig {
+  /** 壁紙の URL に入れる推測できない文字列 */
+  key: string
+  /** 画像の大きさ（壁紙にする iPhone の画面・実ピクセル） */
+  width: number
+  height: number
 }
 
 export interface Profile {
