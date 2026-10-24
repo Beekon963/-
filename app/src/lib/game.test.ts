@@ -5,7 +5,7 @@ import {
   activityXp, buildLedger, challengesByDate, computeRank, dayVerdict, peakRank, winRate, goalProgress, childrenMap, personStatus, summarize, weeklyStats,
   type GameData,
 } from './game'
-import type { Challenge, DailyQuest, Goal, MatchMode, RankDef, WithId } from './types'
+import type { Challenge, DailyQuest, Goal, MatchMode, RankDef, Task, WithId } from './types'
 
 function quest(date: string, done: boolean, xp = 40, id = Math.random().toString(36)): WithId<DailyQuest> {
   return { id, date, title: 'q', stars: 2, xp, done, createdAt: 0 }
@@ -403,5 +403,27 @@ describe('comeback', () => {
     expect(buildLedger(game({ today: '2026-10-02', quests, config: withMode('ranked') })).comebackReady).toBe(false)
     // STANDARD なら 10/02 は保険で休息日 → 連続は切れていない
     expect(buildLedger(game({ today: '2026-10-03', quests, config: withMode('standard') })).comebackReady).toBe(false)
+  })
+})
+
+describe('task board', () => {
+  const task = (box: Task['box'], doneDate: string | undefined, xp: number): WithId<Task> => ({
+    id: Math.random().toString(36), title: 't', box, done: !!doneDate, doneDate, xp, order: 1, createdAt: 0,
+  })
+
+  it('pays the XP stored when the task was done', () => {
+    const { entries } = buildLedger(game({
+      today: '2026-10-02',
+      tasks: [task('key', '2026-10-01', 15), task('now', '2026-10-01', 5), task('next', undefined, 0)],
+    }))
+    expect(entries.filter((e) => e.kind === 'task').map((e) => [e.date, e.amount])).toEqual([['2026-10-01', 15], ['2026-10-01', 5]])
+  })
+
+  it('counts only KEY tasks for the minimum line', () => {
+    const quests = [quest('2026-10-01', true), quest('2026-10-03', true)]
+    const key = buildLedger(game({ today: '2026-10-04', quests, tasks: [task('key', '2026-10-02', 15)] }))
+    expect(key.streak).toBe(3)
+    const now = buildLedger(game({ today: '2026-10-04', quests, tasks: [task('now', '2026-10-02', 5)] }))
+    expect(now.streak).toBe(1)
   })
 })

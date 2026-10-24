@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { IconBack, IconBell } from '../components/Icons'
+import { LockScreenSettings } from '../components/LockScreen'
 import { formatJa } from '../lib/date'
 import { DEFAULT_REMINDERS, MODES, MODE_ORDER } from '../lib/defaults'
 import { REMINDER_DEFS, buildIcs, googleCalendarUrl } from '../lib/reminders'
@@ -31,6 +32,8 @@ const RULE_ROWS: { key: NumKey; label: string }[] = [
   { key: 'penaltyNoWeekPlan', label: '降格：来週の目標を日曜までに書かなかった' },
   { key: 'penaltyNoMonthPlan', label: '降格：来月の目標を月末までに書かなかった' },
   { key: 'comebackBonus', label: 'COMEBACK ボーナス（連続が切れたあと戻った日）' },
+  { key: 'taskKey', label: 'タスク「大切」を完了' },
+  { key: 'taskOther', label: 'タスク「今すぐ・先に・いつか」を完了' },
 ]
 
 export function Settings() {
@@ -160,6 +163,8 @@ export function Settings() {
           時刻を変えたら、前の予定を消してから追加し直してください。
         </p>
       </div>
+
+      <LockScreenSettings g={g} />
 
       <div className="set-group">
         <h3>ACCOUNT</h3>

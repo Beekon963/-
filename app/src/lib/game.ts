@@ -3,12 +3,12 @@
 import { addDays, daysBetween, logicalToday, weekStart, weekday } from './date'
 import { MAX_DAILY_QUESTS, MODES, type ModeDef } from './defaults'
 import type {
-  Activity, Challenge, Config, Contact, DailyQuest, Goal, PeriodGoal, Person, RankCondition, RankDef, Review, WithId, XpRules,
+  Activity, Challenge, Config, Contact, DailyQuest, Goal, PeriodGoal, Person, RankCondition, RankDef, Review, Task, WithId, XpRules,
 } from './types'
 
 export type XpKind =
   | 'quest' | 'started' | 'perfect' | 'activity' | 'goal' | 'pgoal' | 'contact' | 'review' | 'challenge' | 'post' | 'streak' | 'penalty'
-  | 'comeback' | 'insurance'
+  | 'comeback' | 'insurance' | 'task'
 
 export interface XpEntry {
   date: string
@@ -29,6 +29,7 @@ export interface GameData {
   reviews: WithId<Review>[]
   challenges: WithId<Challenge>[]
   periodGoals?: WithId<PeriodGoal>[]
+  tasks?: WithId<Task>[]
   rests: Set<string>
   /** 「前日までに書く」ルールを始める日。null ならルールなし */
   planSince?: string | null
@@ -70,6 +71,9 @@ export function buildLedger(g: GameData) {
   const entries: XpEntry[] = []
   const questsByDate = groupBy(g.quests, (q) => q.date)
   const challengeDays = new Set(g.challenges.map((c) => c.date))
+  const doneTasks = (g.tasks ?? []).filter((t) => t.done && t.doneDate)
+  // 「大切」（目標に近づくタスク）の完了だけは最低ラインに数える
+  const keyTaskDays = new Set(doneTasks.filter((t) => t.box === 'key').map((t) => t.doneDate!))
 
   for (const q of g.quests) {
     if (q.done) entries.push({ date: q.date, amount: q.xp, kind: 'quest', label: q.title, refId: q.id })
@@ -102,6 +106,9 @@ export function buildLedger(g: GameData) {
       entries.push({ date: p.doneDate, amount: p.xp, kind: 'pgoal', label, refId: p.id })
     }
   }
+  for (const t of doneTasks) {
+    if (t.xp) entries.push({ date: t.doneDate!, amount: t.xp, kind: 'task', label: `タスク：${t.title}`, refId: t.id })
+  }
   for (const c of g.challenges) {
     entries.push({ date: c.date, amount: c.xp, kind: 'challenge', label: `挑戦：${c.title}`, refId: c.id })
     if (c.post === 'posted' && c.postedDate && c.postXp) {
@@ -123,8 +130,8 @@ export function buildLedger(g: GameData) {
 
   for (let d = g.startDate; d <= g.today; d = addDays(d, 1)) {
     const qs = questsByDate.get(d) ?? []
-    // 最低ライン：デイリーに1つ手をつける（着手でもいい）か、挑戦を1回記録する
-    const active = qs.some((q) => !untouched(q)) || challengeDays.has(d)
+    // 最低ライン：デイリーに1つ手をつける（着手でもいい）、挑戦を1回記録する、「大切」のタスクを1つ終える
+    const active = qs.some((q) => !untouched(q)) || challengeDays.has(d) || keyTaskDays.has(d)
     const past = d < g.today
     let rest = g.rests.has(d)
 

@@ -34,3 +34,33 @@ drop trigger if exists records_touch on public.records;
 create trigger records_touch
   before insert or update on public.records
   for each row execute function public.records_touch();
+
+-- ---------- ロック画面の壁紙 ----------
+-- アプリが作った壁紙の画像を置く場所。iPhone のショートカットがログインなしで取りに行けるよう公開にしている。
+-- URL に推測できない文字列が入るので、URL を知っている人にしか見られない（アプリの設定で作り直せる）。
+-- 書き込み・一覧・削除は、自分のフォルダ（ユーザー ID）だけ。
+
+insert into storage.buckets (id, name, public)
+values ('wallpapers', 'wallpapers', true)
+on conflict (id) do nothing;
+
+drop policy if exists "wallpapers: list own" on storage.objects;
+create policy "wallpapers: list own" on storage.objects
+  for select to authenticated
+  using (bucket_id = 'wallpapers' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "wallpapers: add own" on storage.objects;
+create policy "wallpapers: add own" on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'wallpapers' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "wallpapers: replace own" on storage.objects;
+create policy "wallpapers: replace own" on storage.objects
+  for update to authenticated
+  using (bucket_id = 'wallpapers' and (storage.foldername(name))[1] = auth.uid()::text)
+  with check (bucket_id = 'wallpapers' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "wallpapers: delete own" on storage.objects;
+create policy "wallpapers: delete own" on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'wallpapers' and (storage.foldername(name))[1] = auth.uid()::text);
