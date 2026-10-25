@@ -111,9 +111,10 @@ iPhone のロック画面ウィジェットは小さく4マスが入らないの
 1. https://supabase.com でアカウントを作り「New project」を作成（Region は Tokyo）
 2. 左メニュー **SQL Editor** を開き、[`supabase/schema.sql`](supabase/schema.sql) の中身を貼り付けて **Run**
 3. **Authentication → Sign In / Providers → Email** で「Confirm email」をオフ（個人用なので確認メール不要）
-4. **Project Settings → API Keys** で次の2つを控える
-   - Project URL（`https://xxxx.supabase.co`）
-   - `anon` `public` キー（または `sb_publishable_...` で始まるキー）
+4. 次の2つを控える。プロジェクトのホーム画面の上にある **Connect** ボタンを押すと、両方が出てくる
+   - Project URL（`https://xxxx.supabase.co`）。Connect で見つからなければ **Project Settings → Data API** のいちばん上
+   - Publishable key（`sb_publishable_...` で始まるキー）。見つからなければ **Project Settings → API Keys**。
+     まだなければ「Create new API keys」で作る。「Legacy API Keys」タブの `anon` `public` キーでも動く
 5. アプリを開き、URL とキーを入力 →「アカウント作成」→ ログイン
 6. 自分のアカウントを作り終えたら、**Authentication → Sign In / Providers** で「Allow new users to sign up」をオフ（他人が登録できないように）
 
