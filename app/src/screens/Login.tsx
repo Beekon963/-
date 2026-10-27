@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { getServerConfig, saveServerConfig, setLocalMode, signIn, signUp } from '../store/cloud'
+import { getServerConfig, resetServerConfig, saveServerConfig, setLocalMode, signIn, signUp } from '../store/cloud'
 import { useData } from '../store/data'
 
 export function Login() {
@@ -49,7 +49,7 @@ export function Login() {
           </div>
           <button
             className="btn"
-            disabled={!/^https:\/\/.+/.test(url.trim()) || key.trim().length < 20}
+            disabled={!url.trim() || key.trim().length < 20}
             onClick={() => {
               saveServerConfig(url, key)
               // クライアントを作り直すため再読み込み
@@ -59,7 +59,10 @@ export function Login() {
           >
             保存して次へ
           </button>
-          <p className="help">Supabase の Project Settings → API（または Data API）に書いてある値です。</p>
+          <p className="help">
+            Supabase のプロジェクトの上にある「Connect」に書いてある値です（URL は Project Settings → Data API にもあります）。
+            URL は https://xxxx.supabase.co の部分だけで大丈夫です。
+          </p>
         </>
       ) : (
         <>
@@ -85,6 +88,17 @@ export function Login() {
             {busy ? '接続中…' : mode === 'in' ? 'ログイン' : 'アカウントを作成'}
           </button>
           {hasLocal && <p className="help">この端末に保存済みのデータは、ログイン後にアカウントへ引き継がれます。</p>}
+          {!server.fromEnv && (
+            <p className="help">
+              接続先：{server.url}
+              <button
+                className="toggle-link" style={{ marginLeft: 8 }}
+                onClick={() => confirm('サーバーの URL とキーを入れ直しますか？') && resetServerConfig()}
+              >
+                URL・キーを入れ直す
+              </button>
+            </p>
+          )}
         </>
       )}
 
