@@ -1,9 +1,12 @@
 import { useEffect, useRef } from 'react'
 import { Boot } from './components/Boot'
+import { RestTimerBar } from './components/RestTimerBar'
 import { RoundStart } from './components/RoundStart'
+import { UndoBar } from './components/UndoBar'
 import { IconBolt, IconChart, IconFlag, IconHome, IconUsers } from './components/Icons'
 import { rankVars } from './lib/color'
 import { Challenges } from './screens/Challenges'
+import { Gym } from './screens/Gym'
 import { Home } from './screens/Home'
 import { Login } from './screens/Login'
 import { MatchResult, RankChange, useReady } from './screens/Overlays'
@@ -13,9 +16,12 @@ import { Settings } from './screens/Settings'
 import { Squad } from './screens/Squad'
 import { Stats } from './screens/Stats'
 import { Vision } from './screens/Vision'
+import { Workout } from './screens/Workout'
 import { useCloud } from './store/cloud'
 import { useData } from './store/data'
 import { ensureProfile, useGame } from './store/game'
+import { useGym } from './store/gym'
+import { setRestPrefs } from './store/rest'
 import { goTab, useUI, type Tab } from './store/ui'
 
 export function App() {
@@ -48,6 +54,11 @@ function Game() {
   const pulled = useData((s) => s.sync.lastPulledAt !== null)
   const { auth } = useCloud()
   const ready = useReady()
+  const timerPrefs = useGym().plan.timer
+
+  useEffect(() => {
+    setRestPrefs(timerPrefs)
+  }, [timerPrefs])
 
   // 初回の取り込みが終わってから開始日を決める（別端末の開始日を上書きしないため）
   useEffect(() => {
@@ -63,7 +74,11 @@ function Game() {
     <div className="app">
       {page ? (
         <div key={page} className="tab-anim page">
-          {page === 'ranks' ? <RankTable /> : page === 'settings' ? <Settings /> : <Vision />}
+          {page === 'ranks' ? <RankTable />
+            : page === 'settings' ? <Settings />
+              : page === 'gym' ? <Gym />
+                : page === 'workout' ? <Workout />
+                  : <Vision />}
         </div>
       ) : (
         <div key={tab} className={`tab-anim ${dir}`}>
@@ -94,6 +109,10 @@ function Game() {
         ))}
       </div>
 
+      <div className="bottom-bars">
+        <RestTimerBar />
+        <UndoBar />
+      </div>
       <RankChange />
       <MatchResult />
       <Boot rankName={g.rank.fullName} color={g.rank.rank.color} />

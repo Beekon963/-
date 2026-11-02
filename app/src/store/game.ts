@@ -30,6 +30,7 @@ type Lists = {
 function collectLists(records: Record<string, Rec>): Lists {
   const lists: Lists = {
     config: [], profile: [], goal: [], quest: [], activity: [], person: [], contact: [], review: [], rest: [], vision: [], challenge: [], pgoal: [], task: [],
+    gymPlan: [], gymDay: [], gymSession: [], bodyWeight: [],
   }
   for (const r of Object.values(records)) {
     if (r.deleted || !lists[r.type]) continue

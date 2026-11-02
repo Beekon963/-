@@ -253,6 +253,121 @@ export interface Vision {
   purpose?: string
 }
 
+// ---------- 筋トレ ----------
+
+/** 記録のしかた：回数・秒数・左右別の回数 */
+export type GymKind = 'reps' | 'seconds' | 'perSide'
+/** 重量の条件：マシン（表示重量）・ダンベル（片手）・バーベル・自重 */
+export type GymLoad = 'machine' | 'dumbbell' | 'barbell' | 'bodyweight'
+export type GymGroup = 'chest' | 'back' | 'legs' | 'shoulders' | 'arms' | 'abs' | 'calves'
+
+export interface GymExercise {
+  id: string
+  /** 履歴を比べるときの種目の名前（作ったときの名前。あとで名前を変えても続けて比べられる） */
+  key: string
+  name: string
+  kind: GymKind
+  load: GymLoad
+  group: GymGroup
+  targetMin: number
+  targetMax: number
+  /** 通常のセット数 */
+  sets: number
+  /** 導入期間のセット数（2か1） */
+  introSets: number
+  /** 休憩タイマーの秒数 */
+  restSec: number
+  /** 置き換えできる種目 */
+  alt?: { name: string; load: GymLoad; key?: string }
+}
+
+export interface GymMenu {
+  id: string
+  name: string
+  /** 目安の時間（分） */
+  minutes: number
+  exercises: GymExercise[]
+}
+
+export interface GymPlan {
+  menus: GymMenu[]
+  /** 曜日（0=日〜6=土）ごとのメニュー id。null = 休養 */
+  schedule: (string | null)[]
+  /** intro = 導入期間のセット数、normal = 通常のセット数（本人が切り替える） */
+  volume: 'intro' | 'normal'
+  /** 初めてトレーニングを始めた日（導入期間の起点・日本時間） */
+  introStart?: string
+  timer: { sound: boolean; notify: boolean }
+}
+
+/** その日だけの予定の振替（menuId = null で休養） */
+export interface GymDay {
+  date: string
+  menuId: string | null
+}
+
+export interface GymSet {
+  /** ウォームアップ（本番セットと分けて記録） */
+  warmup?: boolean
+  /** kg。ダンベルは片手あたり、マシンは表示重量 */
+  weight?: number | null
+  reps?: number | null
+  repsL?: number | null
+  repsR?: number | null
+  seconds?: number | null
+  done: boolean
+  /** 余力：あと何回できそうだったか（任意） */
+  rir?: number | null
+}
+
+/** 実施した種目（メニューをあとで変えても変わらないよう、その日の内容をそのまま持つ） */
+export interface GymSessionExercise {
+  exId: string
+  key: string
+  name: string
+  kind: GymKind
+  load: GymLoad
+  group: GymGroup
+  targetMin: number
+  targetMax: number
+  /** この日に予定した本番のセット数 */
+  plannedSets: number
+  restSec: number
+  /** マシンの機器名（任意） */
+  machine?: string
+  alt?: { name: string; load: GymLoad; key?: string }
+  /** 置き換えた元の種目名 */
+  swappedFrom?: string
+  sets: GymSet[]
+  note?: string
+  /** 痛みや違和感 */
+  pain?: string
+}
+
+/** active = 実施中、done = 完了、partial = 一部実施、skipped = 見送り */
+export type GymStatus = 'active' | 'done' | 'partial' | 'skipped'
+
+export interface GymSession {
+  /** 日本時間の日付 */
+  date: string
+  menuId: string
+  menuName: string
+  minutes: number
+  status: GymStatus
+  /** 導入期間中のトレーニング */
+  intro: boolean
+  startedAt: number
+  endedAt?: number
+  exercises: GymSessionExercise[]
+}
+
+export interface BodyWeight {
+  /** 日本時間の日付 */
+  date: string
+  kg: number
+  createdAt: number
+}
+
 export interface RecordMap {
   config: Config
   profile: Profile
@@ -267,6 +382,10 @@ export interface RecordMap {
   challenge: Challenge
   pgoal: PeriodGoal
   task: Task
+  gymPlan: GymPlan
+  gymDay: GymDay
+  gymSession: GymSession
+  bodyWeight: BodyWeight
 }
 
 export type RecType = keyof RecordMap

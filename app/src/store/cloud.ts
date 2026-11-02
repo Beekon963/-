@@ -3,6 +3,7 @@
 
 import { createClient, type Session, type SupabaseClient } from '@supabase/supabase-js'
 import { create } from 'zustand'
+import { normalizeServerUrl } from '../lib/serverUrl'
 import type { Rec } from '../lib/types'
 import { onLocalChange, useData, wipeLocal } from './data'
 
@@ -20,10 +21,14 @@ export interface ServerConfig {
 export function getServerConfig(): ServerConfig | null {
   const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
   const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
-  if (url && key) return { url, key, fromEnv: true }
+  if (url && key) return { url: normalizeServerUrl(url), key, fromEnv: true }
   try {
     const raw = localStorage.getItem(SERVER_KEY)
-    if (raw) return JSON.parse(raw) as ServerConfig
+    if (raw) {
+      const saved = JSON.parse(raw) as ServerConfig
+      // 以前に「…/rest/v1/」付きで保存した URL も直して使う
+      return { ...saved, url: normalizeServerUrl(saved.url) }
+    }
   } catch {
     /* 読めなければ未設定扱い */
   }
@@ -31,8 +36,15 @@ export function getServerConfig(): ServerConfig | null {
 }
 
 export function saveServerConfig(url: string, key: string) {
-  localStorage.setItem(SERVER_KEY, JSON.stringify({ url: url.trim(), key: key.trim() }))
+  localStorage.setItem(SERVER_KEY, JSON.stringify({ url: normalizeServerUrl(url), key: key.trim() }))
   client = null
+}
+
+/** URL とキーを入れ直せるように消す */
+export function resetServerConfig() {
+  localStorage.removeItem(SERVER_KEY)
+  client = null
+  location.reload()
 }
 
 let client: SupabaseClient | null = null
@@ -79,6 +91,10 @@ function jaError(message: string) {
   if (/User already registered/i.test(message)) return 'このメールアドレスは登録済みです。ログインしてください'
   if (/Password should be at least/i.test(message)) return 'パスワードは6文字以上にしてください'
   if (/Signups not allowed/i.test(message)) return '新規登録は無効になっています'
+  if (/Invalid path specified/i.test(message)) {
+    return 'サーバーの URL が違います（https://xxxx.supabase.co の形。後ろに /rest/v1 などを付けない）'
+  }
+  if (/Invalid API key|No API key/i.test(message)) return 'キーが違います（anon か publishable key を貼ってください）'
   if (/Failed to fetch|NetworkError|Load failed/i.test(message)) return 'サーバーに接続できません。URL と通信状況を確認してください'
   if (/relation .*records.* does not exist|Could not find the table/i.test(message)) {
     return 'データベースの準備ができていません（schema.sql を実行してください）'

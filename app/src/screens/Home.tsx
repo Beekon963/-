@@ -6,6 +6,7 @@ import { CountUp } from '../components/CountUp'
 import { Check, IconAlert, IconBolt, IconChevron, IconClose, IconFlame, IconGear, IconMore, IconPlus, IconShield } from '../components/Icons'
 import { GoalSelect, MinutesPick, fmtMin } from '../components/forms'
 import { RankHero } from '../components/RankHero'
+import { GymCard } from '../components/GymCard'
 import { TaskBoard } from '../components/TaskBoard'
 import { Sheet } from '../components/Sheet'
 import { daysBetween, formatDot, localDate } from '../lib/date'
@@ -129,6 +130,8 @@ export function Home() {
       </section>
 
       <TaskBoard g={g} />
+
+      <GymCard />
 
       <Operations g={g} />
 
